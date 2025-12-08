@@ -113,7 +113,7 @@ func startDaemon() {
 	}
 
 	// Initialize detector
-	det, err := detector.NewV2()
+	det, err := detector.New()
 	if err != nil {
 		log.Fatalf("Failed to initialize window detector: %v", err)
 	}
@@ -197,7 +197,7 @@ func showStatus() {
 	}
 
 	// Try to get current window info
-	det, err := detector.NewV2()
+	det, err := detector.New()
 	if err != nil {
 		fmt.Printf("\nCould not detect current window: %v\n", err)
 		return
@@ -291,7 +291,7 @@ func serveDaemon() {
 	}
 
 	// Initialize detector
-	det, err := detector.NewV2()
+	det, err := detector.New()
 	if err != nil {
 		log.Fatalf("Failed to initialize window detector: %v", err)
 	}

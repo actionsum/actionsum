@@ -1,47 +1,15 @@
 package detector
 
 import (
-	"fmt"
-	"os"
-
-	"actionsum/pkg/integrations/wayland"
-	"actionsum/pkg/integrations/x11"
+	"actionsum/pkg/integrations/hybrid"
 	"actionsum/pkg/window"
+	"os"
 )
 
-// New creates and returns the appropriate window detector for the current system
+// New creates a new hybrid detector that works universally
+// This is the V2 detector that combines window detection with process monitoring
 func New() (window.Detector, error) {
-	sessionType := os.Getenv("XDG_SESSION_TYPE")
-	waylandDisplay := os.Getenv("WAYLAND_DISPLAY")
-	x11Display := os.Getenv("DISPLAY")
-
-	var detector window.Detector
-
-	if sessionType == "wayland" || waylandDisplay != "" {
-		detector = wayland.NewDetector()
-		if detector.IsAvailable() {
-			return detector, nil
-		}
-	}
-
-	if sessionType == "x11" || x11Display != "" {
-		detector = x11.NewDetector()
-		if detector.IsAvailable() {
-			return detector, nil
-		}
-	}
-
-	detector = wayland.NewDetector()
-	if detector.IsAvailable() {
-		return detector, nil
-	}
-
-	detector = x11.NewDetector()
-	if detector.IsAvailable() {
-		return detector, nil
-	}
-
-	return nil, fmt.Errorf("no supported display server found (tried X11 and Wayland)")
+	return hybrid.NewDetector()
 }
 
 // DetectDisplayServer returns the detected display server type

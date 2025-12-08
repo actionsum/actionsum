@@ -9,10 +9,10 @@ import (
 	"strings"
 	"time"
 
+	"actionsum/pkg/integrations/common"
+	"actionsum/pkg/integrations/process"
 	"actionsum/pkg/integrations/wayland"
 	"actionsum/pkg/integrations/x11"
-	"actionsum/pkg/integrationsV2/common"
-	"actionsum/pkg/integrationsV2/process"
 	"actionsum/pkg/window"
 )
 
@@ -274,7 +274,7 @@ func (d *Detector) GetStatus() string {
 	}
 
 	if d.processDetector != nil {
-		status += fmt.Sprintf("  Process Detector: available\n")
+		status += " Process Detector: available\n"
 	} else {
 		status += "  Process Detector: unavailable\n"
 	}
@@ -282,12 +282,6 @@ func (d *Detector) GetStatus() string {
 	status += fmt.Sprintf("  Last successful method: %s\n", d.lastSuccessfulMethod)
 
 	return status
-}
-
-// runCommand is a helper to run shell commands
-func runCommand(cmd string) error {
-	execCmd := exec.Command("sh", "-c", cmd)
-	return execCmd.Run()
 }
 
 // GetDisplayServer returns the display server name

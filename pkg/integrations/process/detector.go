@@ -11,17 +11,17 @@ import (
 	"strings"
 	"time"
 
-	"actionsum/pkg/integrationsV2/common"
+	"actionsum/pkg/integrations/common"
 )
 
 // Detector monitors running processes to detect active applications
 type Detector struct {
-	sessionID       string
-	lastScan        time.Time
-	knownProcesses  map[int]*processInfo
-	guiApps         []string
-	inputMonitor    *InputMonitor
-	initialized     bool
+	sessionID      string
+	lastScan       time.Time
+	knownProcesses map[int]*processInfo
+	guiApps        []string
+	inputMonitor   *InputMonitor
+	initialized    bool
 }
 
 type processInfo struct {
