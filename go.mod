@@ -3,6 +3,7 @@ module actionsum
 go 1.24.1
 
 require (
+	github.com/jezek/xgb v1.2.0
 	github.com/pkg/errors v0.9.1
 	gorm.io/driver/sqlite v1.6.0
 	gorm.io/gorm v1.31.1

@@ -2,6 +2,7 @@ package wayland
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 
@@ -234,12 +235,7 @@ func parseHyprlandWindow(jsonOutput string) *window.WindowInfo {
 
 // getFocusedWindowGnome gets focused window info from GNOME Shell via D-Bus
 func (d *Detector) getFocusedWindowGnome() (*window.WindowInfo, error) {
-	// Try using xdotool/xprop as fallback (works even on Wayland with XWayland)
-	if d.commandExists("xdotool") && d.commandExists("xprop") {
-		return d.getFocusedWindowXWayland()
-	}
-
-	// Try gdbus method
+	// Try gdbus method first (works without X11 authorization)
 	script := `
 	try {
 		let win = global.get_window_actors().find(w => w.meta_window && w.meta_window.has_focus());
@@ -262,59 +258,92 @@ func (d *Detector) getFocusedWindowGnome() (*window.WindowInfo, error) {
 		script)
 
 	output, err := cmd.Output()
-	if err != nil {
-		// Fallback to generic info
-		return &window.WindowInfo{
-			AppName:       "GNOME-Unknown",
-			WindowTitle:   "Unable to detect",
-			ProcessName:   "gnome-shell",
-			DisplayServer: "wayland",
-		}, nil
+
+	// Parse output: (true, 'AppName|||WindowTitle') or (false, '')
+	if err == nil {
+		result := strings.TrimSpace(string(output))
+
+		// Check if Shell.Eval succeeded
+		if strings.HasPrefix(result, "(true,") {
+			result = strings.TrimPrefix(result, "(true, '")
+			result = strings.TrimSuffix(result, "')")
+			result = strings.Trim(result, "'\"")
+
+			parts := strings.Split(result, "|||")
+			appName := "Unknown"
+			windowTitle := "Unknown"
+
+			if len(parts) >= 1 && parts[0] != "" && parts[0] != "Unknown" {
+				appName = parts[0]
+			}
+			if len(parts) >= 2 && parts[1] != "" && parts[1] != "Unknown" {
+				windowTitle = parts[1]
+			}
+
+			// Only return if we got valid info
+			if appName != "Unknown" {
+				return &window.WindowInfo{
+					AppName:       appName,
+					WindowTitle:   windowTitle,
+					ProcessName:   appName,
+					DisplayServer: "wayland",
+				}, nil
+			}
+		}
 	}
 
-	// Parse output: (true, 'AppName|||WindowTitle')
-	result := strings.TrimSpace(string(output))
-	result = strings.TrimPrefix(result, "(true, '")
-	result = strings.TrimPrefix(result, "(false, '")
-	result = strings.TrimSuffix(result, "')")
-	result = strings.Trim(result, "'\"")
-
-	parts := strings.Split(result, "|||")
-	appName := "Unknown"
-	windowTitle := "Unknown"
-
-	if len(parts) >= 1 && parts[0] != "" {
-		appName = parts[0]
-	}
-	if len(parts) >= 2 && parts[1] != "" {
-		windowTitle = parts[1]
+	// Fallback to XWayland using xprop (only needs xprop, not xdotool)
+	if d.commandExists("xprop") {
+		info, xErr := d.getFocusedWindowXWayland()
+		if xErr == nil {
+			return info, nil
+		}
+		// Return detailed error from xprop
+		return nil, fmt.Errorf("GNOME window detection failed: gdbus Shell.Eval blocked, xprop failed: %v", xErr)
 	}
 
-	return &window.WindowInfo{
-		AppName:       appName,
-		WindowTitle:   windowTitle,
-		ProcessName:   appName,
-		DisplayServer: "wayland",
-	}, nil
+	// Last resort: return error
+	return nil, fmt.Errorf("GNOME window detection failed: gdbus Shell.Eval blocked and xprop unavailable")
 }
 
 // getFocusedWindowXWayland uses XWayland bridge (fallback for Wayland)
 func (d *Detector) getFocusedWindowXWayland() (*window.WindowInfo, error) {
-	windowIDCmd := exec.Command("xdotool", "getactivewindow")
-	windowIDOutput, err := windowIDCmd.Output()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get active wayland window ID: %w", err)
+	// Check if DISPLAY is set - required for xprop
+	display := os.Getenv("DISPLAY")
+	if display == "" {
+		return nil, fmt.Errorf("DISPLAY environment variable not set (XWayland not available)")
 	}
 
-	windowID := strings.TrimSpace(string(windowIDOutput))
+	// Get active window ID from root window property
+	rootCmd := exec.Command("xprop", "-root", "_NET_ACTIVE_WINDOW")
+	rootOutput, err := rootCmd.CombinedOutput()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get active window from root: %w (output: %s)", err, string(rootOutput))
+	}
 
-	windowNameCmd := exec.Command("xdotool", "getwindowname", windowID)
-	windowNameOutput, _ := windowNameCmd.Output()
-	windowTitle := strings.TrimSpace(string(windowNameOutput))
+	// Parse: _NET_ACTIVE_WINDOW(WINDOW): window id # 0x80032b
+	windowID := ""
+	output := string(rootOutput)
+	if strings.Contains(output, "# 0x") {
+		parts := strings.Split(output, "# ")
+		if len(parts) >= 2 {
+			windowID = strings.TrimSpace(parts[1])
+		}
+	}
+
+	if windowID == "" || windowID == "0x0" {
+		return nil, fmt.Errorf("no active window found (focused window may be native Wayland)")
+	}
+
+	// Get window title
+	nameCmd := exec.Command("xprop", "-id", windowID, "WM_NAME")
+	nameOutput, _ := nameCmd.Output()
+	windowTitle := parseXPropString(string(nameOutput))
 	if windowTitle == "" {
 		windowTitle = "Unknown"
 	}
 
+	// Get window class
 	classCmd := exec.Command("xprop", "-id", windowID, "WM_CLASS")
 	classOutput, _ := classCmd.Output()
 	appName := parseWMClass(string(classOutput))
@@ -328,6 +357,19 @@ func (d *Detector) getFocusedWindowXWayland() (*window.WindowInfo, error) {
 		ProcessName:   appName,
 		DisplayServer: "wayland",
 	}, nil
+}
+
+// parseXPropString parses xprop string output like: WM_NAME(STRING) = "title"
+func parseXPropString(output string) string {
+	if strings.Contains(output, "=") {
+		parts := strings.SplitN(output, "=", 2)
+		if len(parts) == 2 {
+			value := strings.TrimSpace(parts[1])
+			value = strings.Trim(value, "\"")
+			return value
+		}
+	}
+	return ""
 }
 
 // parseWMClass extracts class from WM_CLASS output

@@ -113,7 +113,7 @@ func startDaemon() {
 	}
 
 	// Initialize detector
-	det, err := detector.New()
+	det, err := detector.NewV2()
 	if err != nil {
 		log.Fatalf("Failed to initialize window detector: %v", err)
 	}
@@ -189,15 +189,15 @@ func showStatus() {
 
 	if !running {
 		fmt.Println("Status: Not running")
-		return
+		// Still show current window detection even when not running
+	} else {
+		fmt.Printf("Status: Running (PID: %d)\n", pid)
+		fmt.Printf("Poll Interval: %v\n", cfg.Tracker.PollInterval)
+		fmt.Printf("Database: %s\n", cfg.Database.Path)
 	}
 
-	fmt.Printf("Status: Running (PID: %d)\n", pid)
-	fmt.Printf("Poll Interval: %v\n", cfg.Tracker.PollInterval)
-	fmt.Printf("Database: %s\n", cfg.Database.Path)
-
 	// Try to get current window info
-	det, err := detector.New()
+	det, err := detector.NewV2()
 	if err != nil {
 		fmt.Printf("\nCould not detect current window: %v\n", err)
 		return
@@ -291,7 +291,7 @@ func serveDaemon() {
 	}
 
 	// Initialize detector
-	det, err := detector.New()
+	det, err := detector.NewV2()
 	if err != nil {
 		log.Fatalf("Failed to initialize window detector: %v", err)
 	}

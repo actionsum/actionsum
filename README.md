@@ -43,10 +43,33 @@ actionsum webreport     # Launch web UI in browser
 - **Data Retention**: Indefinite (no automatic cleanup for now)
 - **Configuration**: Default values, no config file needed initially
 
-### Detection Methods
-- **X11**: Using `xdotool`, `wmctrl`, or X11 libraries
-- **Wayland**: Compositor-specific protocols (GNOME Shell extensions, KDE protocols, wlr-foreign-toplevel for wlroots-based compositors)
-- **Idle Detection**: X11 screensaver extension, logind D-Bus, or lock screen process detection
+### Detection Methods (V2 - Universal Hybrid Approach)
+
+actionsum uses a **hybrid detection system** that combines multiple methods for universal compatibility:
+
+#### Primary: Window Detection
+- **X11**: Using `xprop` for window detection ✅
+- **Wayland Compositors**:
+  - **Sway/Hyprland**: Native protocol support via `swaymsg`/`hyprctl` ✅
+  - **KDE Plasma**: D-Bus scripting API ✅
+  - **GNOME**: XWayland bridge for X11 apps ✅
+
+#### Fallback: Process Monitoring
+When window detection fails (e.g., native Wayland apps on GNOME), the system automatically falls back to:
+- **Process scanning**: Monitors `/proc` filesystem for running GUI applications
+- **Activity tracking**: Uses CPU usage heuristics to identify the active application
+- **Smart scoring**: Combines multiple signals to determine the most likely active app
+
+#### Universal Compatibility
+- ✅ **All X11 applications** - Full window detection with titles
+- ✅ **XWayland applications** (Chrome, VSCode, Firefox, Electron apps, etc.) - Full window detection with titles
+- ✅ **Native Wayland applications** (GNOME Terminal, Nautilus, etc.) - Process-based detection (app name only)
+- ✅ **Works on all compositors** - No compositor-specific limitations
+- ✅ **No failed tracking** - Always falls back to process detection
+
+The hybrid approach ensures tracking works **regardless of display server, compositor, or desktop environment**.
+
+> **Note**: When using process-based detection (fallback for native Wayland apps), window titles may not be available. The system will still accurately track the application name and time spent.
 
 ### Data Model
 - Track: timestamp, application name, window title, focus duration
@@ -57,15 +80,28 @@ actionsum webreport     # Launch web UI in browser
 
 ## 📋 Roadmap
 
-- [ ] Basic daemon architecture (start/stop/status)
-- [ ] X11 window focus detection
-- [ ] Wayland window focus detection
-- [ ] SQLite storage layer
-- [ ] Idle/lock detection
-- [ ] Terminal report generation (day/week/month)
-- [ ] Web-based report UI
-- [ ] Export functionality (CSV/JSON)
-- [ ] systemd service integration (optional)
+### Completed ✅
+- [x] Basic daemon architecture (start/stop/status)
+- [x] X11 window focus detection
+- [x] Wayland window focus detection (Sway, Hyprland, KDE)
+- [x] SQLite storage layer
+- [x] Idle/lock detection
+- [x] Terminal report generation (day/week/month)
+- [x] Web-based report UI
+- [x] Export functionality (JSON)
+- [x] **V2 Hybrid Detection** - Universal compatibility with process-based fallback
+
+### In Progress 🚧
+- [ ] Enhanced process detection with ML-based activity prediction
+- [ ] Better window title detection for native Wayland apps
+- [ ] systemd service integration
+
+### Planned 📝
+- [ ] Browser tab tracking via extensions
+- [ ] Editor plugin integration (VSCode, JetBrains IDEs)
+- [ ] CSV export
+- [ ] Data visualization improvements
+- [ ] GNOME Shell extension for native Wayland detection
 
 ---
 

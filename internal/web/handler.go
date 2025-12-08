@@ -59,7 +59,6 @@ func (h *Handler) handleEvents(w http.ResponseWriter, r *http.Request) {
 	periodType := query.Get("period") // day, week, month
 
 	var events []*models.FocusEvent
-	var err error
 
 	if periodType != "" {
 		// Get events for a specific period
@@ -69,6 +68,10 @@ func (h *Handler) handleEvents(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		events, err = h.repo.GetEventsSince(period.Start)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Failed to fetch events: %v", err), http.StatusInternalServerError)
+			return
+		}
 	} else {
 		// Get recent events (last 24 hours by default)
 		start := time.Now().Add(-24 * time.Hour)
@@ -88,11 +91,6 @@ func (h *Handler) handleEvents(w http.ResponseWriter, r *http.Request) {
 				events = allEvents
 			}
 		}
-	}
-
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Failed to fetch events: %v", err), http.StatusInternalServerError)
-		return
 	}
 
 	respondJSON(w, events)
@@ -209,9 +207,9 @@ func (h *Handler) handleStatus(w http.ResponseWriter, r *http.Request) {
 
 	if latestEvent != nil {
 		status["latest_event"] = map[string]interface{}{
-			"app_name":      latestEvent.AppName,
-			"window_title":  latestEvent.WindowTitle,
-			"timestamp":     latestEvent.Timestamp,
+			"app_name":       latestEvent.AppName,
+			"window_title":   latestEvent.WindowTitle,
+			"timestamp":      latestEvent.Timestamp,
 			"display_server": latestEvent.DisplayServer,
 		}
 	}
