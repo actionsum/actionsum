@@ -59,7 +59,7 @@ func Connect(dbPath string) (*DB, error) {
 
 // Initialize creates the necessary database tables using GORM AutoMigrate
 func (db *DB) Initialize() error {
-	err := db.AutoMigrate(&models.FocusEvent{})
+	err := db.AutoMigrate(&models.FocusEvent{}, &models.ErrorLog{})
 	if err != nil {
 		return fmt.Errorf("failed to initialize database schema: %w", err)
 	}

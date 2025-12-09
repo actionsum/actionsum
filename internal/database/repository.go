@@ -117,3 +117,12 @@ func (r *Repository) UpdateDuration(id uint, duration int64) error {
 	}
 	return nil
 }
+
+// CreateErrorLog inserts a new error log into the database
+func (r *Repository) CreateErrorLog(errorLog *models.ErrorLog) error {
+	result := r.db.Create(errorLog)
+	if result.Error != nil {
+		return errors.Wrap(result.Error, "failed to insert error log")
+	}
+	return nil
+}

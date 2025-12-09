@@ -41,8 +41,12 @@ func (s *Service) Start(ctx context.Context) error {
 	ticker := time.NewTicker(s.config.Tracker.PollInterval)
 	defer ticker.Stop()
 
-	if err := s.trackOnce(); err != nil {
-		log.Printf("Warning: initial tracking failed: %v", err)
+	appName, err := s.trackOnce()
+	if err != nil {
+		s.storeError(err)
+	}
+	if appName != "" {
+		log.Printf("Initial track: %s", appName)
 	}
 
 	for {
@@ -58,8 +62,12 @@ func (s *Service) Start(ctx context.Context) error {
 			return nil
 
 		case <-ticker.C:
-			if err := s.trackOnce(); err != nil {
-				log.Printf("Tracking error: %v", err)
+			appName, err := s.trackOnce()
+			if err != nil {
+				s.storeError(err)
+			}
+			if appName != "" {
+				log.Printf("Tracked: %s", appName)
 			}
 		}
 	}
@@ -75,34 +83,25 @@ func (s *Service) IsRunning() bool {
 	return s.running
 }
 
-func (s *Service) trackOnce() error {
+func (s *Service) trackOnce() (string, error) {
 
 	idleInfo, err := s.detector.GetIdleInfo()
 	if err != nil {
-
-		log.Printf("Warning: failed to get idle info: %v", err)
-		idleInfo = &window.IdleInfo{
-			IsIdle:   false,
-			IsLocked: false,
-			IdleTime: 0,
-		}
+		return "", fmt.Errorf("failed to get idle info: %w", err)
 	}
 
 	if idleInfo.IsIdle || idleInfo.IsLocked {
 		log.Printf("Skipping tracking: idle=%v, locked=%v", idleInfo.IsIdle, idleInfo.IsLocked)
-		return nil
+		return "", nil
 	}
 
 	windowInfo, err := s.detector.GetFocusedWindow()
 	if err != nil {
-
-		log.Printf("Warning: failed to get focused window: %v", err)
-		return nil
+		return "", fmt.Errorf("failed to get focused window: %w", err)
 	}
 
 	if windowInfo == nil || windowInfo.AppName == "" {
-		log.Printf("Warning: no valid window information available")
-		return nil
+		return "", fmt.Errorf("no valid window information available")
 	}
 
 	event := &models.FocusEvent{
@@ -117,11 +116,24 @@ func (s *Service) trackOnce() error {
 	}
 
 	if err := s.repo.Create(event); err != nil {
-		return fmt.Errorf("failed to save event: %w", err)
+		return "", fmt.Errorf("failed to save event: %w", err)
 	}
 
-	log.Printf("Tracked: %s - %s", event.AppName, event.WindowTitle)
-	return nil
+	return event.AppName, nil
+}
+
+func (s *Service) storeError(err error) {
+	errorLog := &models.ErrorLog{
+		Timestamp: time.Now(),
+		ErrorMsg:  err.Error(),
+		CreatedAt: time.Now(),
+	}
+
+	if dbErr := s.repo.CreateErrorLog(errorLog); dbErr != nil {
+		log.Printf("Failed to store error in database: %v (original error: %v)", dbErr, err)
+	} else {
+		log.Printf("Error logged to database: %v", err)
+	}
 }
 
 func (s *Service) GetCurrentWindow() (*window.WindowInfo, *window.IdleInfo, error) {
