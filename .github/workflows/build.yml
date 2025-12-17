@@ -1,24 +1,15 @@
-name: Build and Release
+name: Build
 
 on:
   push:
     branches: [ main, master ]
-    tags:
-      - 'v*'
   pull_request:
     branches: [ main, master ]
-
-permissions:
-  contents: write
 
 jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        goos: [linux]
-        goarch: [amd64, arm64]
     
     steps:
     - name: Checkout code
@@ -42,9 +33,6 @@ jobs:
     - name: Download dependencies
       run: go mod download
 
-    - name: Run tests
-      run: go test -v ./...
-
     - name: Install build deps (sqlite3)
       run: |
         sudo apt-get update
@@ -52,59 +40,5 @@ jobs:
 
     - name: Build
       env:
-        GOOS: ${{ matrix.goos }}
-        GOARCH: ${{ matrix.goarch }}
         CGO_ENABLED: 1
-      run: |
-        mkdir -p dist
-        go build -v -o dist/actionsum-${{ matrix.goos }}-${{ matrix.goarch }} ./
-
-    - name: Upload artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: actionsum-${{ matrix.goos }}-${{ matrix.goarch }}
-        path: dist/actionsum-${{ matrix.goos }}-${{ matrix.goarch }}
-
-  release:
-    name: Release
-    needs: build
-    runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Download all artifacts
-      uses: actions/download-artifact@v4
-      with:
-        path: dist
-
-    - name: Create Release
-      uses: softprops/action-gh-release@v1
-      with:
-        files: dist/**/*
-        draft: false
-        prerelease: false
-        generate_release_notes: true
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Set up Go
-      uses: actions/setup-go@v5
-      with:
-        go-version: '1.21'
-
-    - name: golangci-lint
-      uses: golangci/golangci-lint-action@v4
-      with:
-        version: latest
-        args: --timeout=5m
+      run: go build -v -o actionsum ./
