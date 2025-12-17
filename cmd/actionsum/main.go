@@ -10,13 +10,13 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/hugo/actionsum/internal/config"
-	"github.com/hugo/actionsum/internal/daemon"
-	"github.com/hugo/actionsum/internal/database"
-	"github.com/hugo/actionsum/internal/reporter"
-	"github.com/hugo/actionsum/internal/tracker"
-	"github.com/hugo/actionsum/internal/web"
-	"github.com/hugo/actionsum/pkg/detector"
+	"github.com/actionsum/actionsum/internal/config"
+	"github.com/actionsum/actionsum/internal/daemon"
+	"github.com/actionsum/actionsum/internal/database"
+	"github.com/actionsum/actionsum/internal/reporter"
+	"github.com/actionsum/actionsum/internal/tracker"
+	"github.com/actionsum/actionsum/internal/web"
+	"github.com/actionsum/actionsum/pkg/detector"
 )
 
 var (

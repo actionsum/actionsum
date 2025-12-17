@@ -8,10 +8,10 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/hugo/actionsum/internal/config"
-	"github.com/hugo/actionsum/internal/database"
-	"github.com/hugo/actionsum/internal/models"
-	"github.com/hugo/actionsum/internal/reporter"
+	"github.com/actionsum/actionsum/internal/config"
+	"github.com/actionsum/actionsum/internal/database"
+	"github.com/actionsum/actionsum/internal/models"
+	"github.com/actionsum/actionsum/internal/reporter"
 )
 
 // Handler manages HTTP requests

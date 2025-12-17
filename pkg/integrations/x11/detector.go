@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/hugo/actionsum/pkg/window"
+	"github.com/actionsum/actionsum/pkg/window"
 )
 
 // Detector implements window.Detector for X11

@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hugo/actionsum/pkg/integrations/common"
+	"github.com/actionsum/actionsum/pkg/integrations/common"
 )
 
 // Detector monitors running processes to detect active applications

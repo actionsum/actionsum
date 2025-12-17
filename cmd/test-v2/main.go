@@ -5,7 +5,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/hugo/actionsum/pkg/detector"
+	"github.com/actionsum/actionsum/pkg/detector"
 )
 
 func main() {

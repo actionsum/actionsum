@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hugo/actionsum/internal/models"
+	"github.com/actionsum/actionsum/internal/models"
 
 	"github.com/pkg/errors"
 

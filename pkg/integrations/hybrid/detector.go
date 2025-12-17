@@ -9,11 +9,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hugo/actionsum/pkg/integrations/common"
-	"github.com/hugo/actionsum/pkg/integrations/process"
-	"github.com/hugo/actionsum/pkg/integrations/wayland"
-	"github.com/hugo/actionsum/pkg/integrations/x11"
-	"github.com/hugo/actionsum/pkg/window"
+	"github.com/actionsum/actionsum/pkg/integrations/common"
+	"github.com/actionsum/actionsum/pkg/integrations/process"
+	"github.com/actionsum/actionsum/pkg/integrations/wayland"
+	"github.com/actionsum/actionsum/pkg/integrations/x11"
+	"github.com/actionsum/actionsum/pkg/window"
 )
 
 // Detector combines multiple detection methods for universal application tracking

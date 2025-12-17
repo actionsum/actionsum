@@ -1,4 +1,4 @@
-module github.com/hugo/actionsum
+module github.com/actionsum/actionsum
 
 go 1.24.1
 
