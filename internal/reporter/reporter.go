@@ -8,6 +8,7 @@ import (
 	"github.com/actionsum/actionsum/internal/config"
 	"github.com/actionsum/actionsum/internal/database"
 	"github.com/actionsum/actionsum/internal/models"
+	"github.com/actionsum/actionsum/pkg/utils"
 )
 
 // Reporter handles report generation
@@ -104,21 +105,24 @@ func (r *Reporter) FormatReportText(report *models.Report) string {
 	output += fmt.Sprintf("Period: %s to %s\n",
 		report.Period.Start.Format("2006-01-02 15:04"),
 		report.Period.End.Format("2006-01-02 15:04"))
-	output += fmt.Sprintf("Total Time: %.2fh (%.0fm)\n\n", report.TotalHours, report.TotalMinutes)
+	output += fmt.Sprintf("Total Time: %s\n\n", utils.FormatRoundedUnit(report.TotalSeconds))
 
 	if len(report.Apps) == 0 {
 		output += "No activity recorded for this period.\n"
 		return output
 	}
 
-	output += fmt.Sprintf("%-30s %10s %10s %10s\n", "Application", "Hours", "Minutes", "Percent")
+	output += fmt.Sprintf("%-30s %10s %10s %10s\n", "Application", "Hours", "Time", "Percent")
 	output += fmt.Sprintf("%s\n", "--------------------------------------------------------------------------------")
 
 	for _, app := range report.Apps {
-		output += fmt.Sprintf("%-30s %10.2f %10.0f %9.1f%%\n",
+		// Show the highest round unit (h, m, or s)
+		timeStr := utils.FormatRoundedUnit(app.TotalSeconds)
+
+		output += fmt.Sprintf("%-30s %10.2f %10s %9.1f%%\n",
 			truncate(app.AppName, 30),
 			app.TotalHours,
-			app.TotalMinutes,
+			timeStr,
 			app.Percentage)
 	}
 

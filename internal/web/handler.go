@@ -12,6 +12,7 @@ import (
 	"github.com/actionsum/actionsum/internal/database"
 	"github.com/actionsum/actionsum/internal/models"
 	"github.com/actionsum/actionsum/internal/reporter"
+	"github.com/actionsum/actionsum/pkg/utils"
 )
 
 // Handler manages HTTP requests
@@ -207,13 +208,15 @@ func (h *Handler) respondSummaryHTML(w http.ResponseWriter, summaries []models.A
 
 	html := ""
 	for _, app := range summaries {
-		hours := int(app.TotalHours)
-		minutes := int(app.TotalMinutes) % 60
-		timeStr := ""
-		if hours > 0 {
-			timeStr = fmt.Sprintf("%dh %dm", hours, minutes)
-		} else {
-			timeStr = fmt.Sprintf("%dm", minutes)
+		// Show the highest round unit (h, m, or s)
+		timeStr := utils.FormatRoundedUnit(app.TotalSeconds)
+
+		// Format percentage with padding for XX.X% format
+		percentStr := fmt.Sprintf("%.1f%%", app.Percentage)
+		if app.Percentage < 10 {
+			percentStr = "&nbsp;&nbsp;" + percentStr
+		} else if app.Percentage < 100 {
+			percentStr = "&nbsp;" + percentStr
 		}
 
 		html += fmt.Sprintf(`
@@ -221,19 +224,12 @@ func (h *Handler) respondSummaryHTML(w http.ResponseWriter, summaries []models.A
 			<span class="app-name">%s</span>
 			<div>
 				<span class="app-time">%s</span>
-				<span class="app-percentage">%.1f%%</span>
+				<span class="app-percentage">%s</span>
 			</div>
-		</div>`, app.AppName, timeStr, app.Percentage)
+		</div>`, app.AppName, timeStr, percentStr)
 	}
 
-	totalHours := int(totalSeconds / 3600)
-	totalMinutes := int(totalSeconds/60) % 60
-	totalStr := ""
-	if totalHours > 0 {
-		totalStr = fmt.Sprintf("%dh %dm", totalHours, totalMinutes)
-	} else {
-		totalStr = fmt.Sprintf("%dm", totalMinutes)
-	}
+	totalStr := utils.FormatRoundedUnit(totalSeconds)
 
 	html += fmt.Sprintf(`<div class="total">Total: %s</div>`, totalStr)
 
@@ -412,6 +408,10 @@ func (h *Handler) handleIndex(w http.ResponseWriter, r *http.Request) {
             color: var(--accent-color);
             font-weight: 600;
             margin-left: 10px;
+            display: inline-block;
+            min-width: 5em;
+            text-align: right;
+			margin: 1px
         }
         
         .loading {
