@@ -8,7 +8,7 @@ before:
 builds:
   - id: actionsum
     binary: actionsum
-    main: ./cmd/actionsum
+    main: .
     env:
       - CGO_ENABLED=1
     goos:
@@ -62,7 +62,7 @@ changelog:
 
 release:
   github:
-    owner: hugo
+    owner: actionsum
     name: actionsum
   draft: false
   prerelease: auto

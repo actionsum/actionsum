@@ -10,7 +10,7 @@ LDFLAGS=-ldflags "-s -w -X main.version=$(VERSION) -X main.commit=$(COMMIT) -X m
 # Build the application
 build:
 	@echo "Building $(BINARY_NAME) $(VERSION)..."
-	go build $(LDFLAGS) -o $(BINARY_NAME) ./cmd/actionsum
+	go build $(LDFLAGS) -o $(BINARY_NAME) .
 	@echo "Build complete: ./$(BINARY_NAME)"
 
 # Install to system
