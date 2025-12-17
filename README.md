@@ -128,30 +128,6 @@ The hybrid approach ensures tracking works **regardless of display server, compo
 - [x] Export functionality (JSON)
 - [x] **V2 Hybrid Detection** - Universal compatibility with process-based fallback
 
-### In Progress 🚧
-- [ ] Enhanced process detection with ML-based activity prediction
-- [ ] Better window title detection for native Wayland apps
-- [ ] systemd service integration
-
-### Planned 📝
-- [ ] Browser tab tracking via extensions
-- [ ] Editor plugin integration (VSCode, JetBrains IDEs)
-- [ ] CSV export
-- [ ] Data visualization improvements
-- [ ] GNOME Shell extension for native Wayland detection
-
----
-
-## 🔧 Installation
-
-*Coming soon - build from source instructions*
-
----
-
-## 📖 Usage
-
-*Coming soon - detailed usage examples*
-
 ---
 
 ## 🤝 Contributing
