@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"runtime/debug"
 	"syscall"
 	"time"
 
@@ -20,10 +21,31 @@ import (
 )
 
 var (
-	version = "0.1.1"
+	version = "dev"
 	commit  = "unknown"
 	date    = "unknown"
 )
+
+func init() {
+	// Try to get version from build info (works with go install)
+	if info, ok := debug.ReadBuildInfo(); ok {
+		if version == "dev" && info.Main.Version != "" && info.Main.Version != "(devel)" {
+			version = info.Main.Version
+		}
+		for _, setting := range info.Settings {
+			switch setting.Key {
+			case "vcs.revision":
+				if commit == "unknown" && len(setting.Value) >= 7 {
+					commit = setting.Value[:7]
+				}
+			case "vcs.time":
+				if date == "unknown" {
+					date = setting.Value
+				}
+			}
+		}
+	}
+}
 
 const appName = "actionsum"
 
@@ -120,7 +142,8 @@ func startDaemon() {
 }
 
 func runStartDaemon(cfg *config.Config, dm *daemon.Daemon) {
-	logFile, err := os.OpenFile("/tmp/actionsum.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	logPath := fmt.Sprintf("/tmp/actionsum-%d.log", os.Getuid())
+	logFile, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 	if err == nil {
 		log.SetOutput(logFile)
 		defer logFile.Close()
@@ -308,7 +331,8 @@ func serveDaemon() {
 }
 
 func runServeDaemon(cfg *config.Config, dm *daemon.Daemon) {
-	logFile, err := os.OpenFile("/tmp/actionsum.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	logPath := fmt.Sprintf("/tmp/actionsum-%d.log", os.Getuid())
+	logFile, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 	if err == nil {
 		log.SetOutput(logFile)
 		defer logFile.Close()
@@ -377,12 +401,13 @@ func daemonize(withWeb bool) {
 	if err != nil {
 		log.Fatalf("Failed to start daemon process: %v", err)
 	}
+	logPath := fmt.Sprintf("/tmp/actionsum-%d.log", os.Getuid())
 	if withWeb {
 		fmt.Printf("Daemon started successfully (PID: %d)\n", process.Pid)
 		fmt.Println("Web API available at: http://localhost:8080")
-		fmt.Println("Logs: /tmp/actionsum.log")
+		fmt.Printf("Logs: %s\n", logPath)
 	} else {
 		fmt.Printf("Daemon started successfully (PID: %d)\n", process.Pid)
-		fmt.Println("Logs: /tmp/actionsum.log")
+		fmt.Printf("Logs: %s\n", logPath)
 	}
 }
