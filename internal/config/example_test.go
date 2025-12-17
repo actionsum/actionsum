@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"actionsum/internal/config"
+	"github.com/hugo/actionsum/internal/config"
 )
 
 // Example of creating a default configuration

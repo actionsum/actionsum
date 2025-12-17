@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"time"
 
-	"actionsum/internal/config"
-	"actionsum/internal/database"
+	"github.com/hugo/actionsum/internal/config"
+	"github.com/hugo/actionsum/internal/database"
 )
 
 // Server wraps the HTTP server

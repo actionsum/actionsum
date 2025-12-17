@@ -9,11 +9,11 @@ import (
 	"strings"
 	"time"
 
-	"actionsum/pkg/integrations/common"
-	"actionsum/pkg/integrations/process"
-	"actionsum/pkg/integrations/wayland"
-	"actionsum/pkg/integrations/x11"
-	"actionsum/pkg/window"
+	"github.com/hugo/actionsum/pkg/integrations/common"
+	"github.com/hugo/actionsum/pkg/integrations/process"
+	"github.com/hugo/actionsum/pkg/integrations/wayland"
+	"github.com/hugo/actionsum/pkg/integrations/x11"
+	"github.com/hugo/actionsum/pkg/window"
 )
 
 // Detector combines multiple detection methods for universal application tracking
@@ -91,13 +91,16 @@ func (d *Detector) GetActiveApp() (*common.AppInfo, error) {
 		return nil, fmt.Errorf("detector not initialized")
 	}
 
+	var windowErr error
+
 	// Try window detection first (most accurate when available)
 	if d.windowDetector != nil && d.windowDetector.IsAvailable() {
 		if appInfo, err := d.getActiveAppFromWindow(); err == nil {
 			d.lastSuccessfulMethod = "window"
 			return appInfo, nil
 		} else {
-			log.Printf("Window detection failed: %v", err)
+			windowErr = err
+			// Don't log here - only log if all methods fail
 		}
 	}
 
@@ -118,7 +121,12 @@ func (d *Detector) GetActiveApp() (*common.AppInfo, error) {
 
 		return appInfo, nil
 	} else {
-		log.Printf("Process detection failed: %v", err)
+		// Both methods failed - now log the details
+		if windowErr != nil {
+			log.Printf("All detection methods failed - Window: %v, Process: %v", windowErr, err)
+		} else {
+			log.Printf("Process detection failed: %v", err)
+		}
 	}
 
 	return nil, fmt.Errorf("all detection methods failed")

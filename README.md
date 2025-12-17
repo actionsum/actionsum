@@ -1,10 +1,44 @@
 # actionsum
 
-[![Go](https://img.shields.io/badge/Go-1.21%2B-00ADD8.svg?logo=go)](https://go.dev/) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) [![Linux](https://img.shields.io/badge/Linux-FCC624.svg?logo=linux&logoColor=black)](https://www.kernel.org/)
+[![Go](https://img.shields.io/badge/Go-1.21%2B-00ADD8.svg?logo=go)](https://go.dev/) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) [![Linux](https://img.shields.io/badge/Linux-FCC624.svg?logo=linux&logoColor=black)](https://www.kernel.org/) [![Build](https://github.com/hugo/actionsum/actions/workflows/build.yml/badge.svg)](https://github.com/hugo/actionsum/actions)
 
 **actionsum** is a lightweight, Linux CLI daemon for tracking and reporting time spent in focused applications. It runs in the background, monitors your current app focus, and generates detailed time reports for productivity insights—accessible via terminal or web browser.
 
 Perfect for developers, remote workers, and anyone tracking focus time on Linux desktops (X11 and Wayland support for GNOME, KDE, Sway, Hyprland, etc.).
+
+---
+
+## 📦 Installation
+
+### Via Go Install (Recommended)
+```bash
+go install github.com/hugo/actionsum/cmd/actionsum@latest
+```
+
+### From Source
+```bash
+git clone https://github.com/hugo/actionsum.git
+cd actionsum
+go build -o actionsum ./cmd/actionsum
+sudo mv actionsum /usr/local/bin/
+```
+
+### From Release
+Download the latest binary from [Releases](https://github.com/hugo/actionsum/releases):
+```bash
+# Download and install (replace VERSION and ARCH as needed)
+wget https://github.com/hugo/actionsum/releases/download/v0.1.0/actionsum_0.1.0_linux_amd64.tar.gz
+tar -xzf actionsum_0.1.0_linux_amd64.tar.gz
+sudo mv actionsum /usr/local/bin/
+```
+
+### Dependencies
+For X11 systems, install one of:
+- `xdotool` (recommended)
+- `wmctrl`
+
+For Wayland systems with GNOME, install:
+- `gdbus` (usually pre-installed)
 
 ---
 
@@ -24,13 +58,16 @@ Perfect for developers, remote workers, and anyone tracking focus time on Linux 
 - **Web Reports**: Interactive browser-based reports via built-in web server
 - **Time Aggregation**: Summarizes total time per application over selected periods
 
-### Commands (Planned)
+### Commands
 ```bash
 actionsum start         # Start the tracking daemon
+actionsum serve         # Start daemon with web API server
 actionsum stop          # Stop the daemon
 actionsum status        # Check daemon status + current focused app
-actionsum report        # Display terminal report (--day/--week/--month)
-actionsum webreport     # Launch web UI in browser
+actionsum report [day|week|month]  # Display terminal report
+actionsum clear         # Clear all tracking data
+actionsum version       # Show version information
+actionsum help          # Show help message
 ```
 
 ---

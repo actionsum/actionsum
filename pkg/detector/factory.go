@@ -1,8 +1,8 @@
 package detector
 
 import (
-	"actionsum/pkg/integrations/hybrid"
-	"actionsum/pkg/window"
+	"github.com/hugo/actionsum/pkg/integrations/hybrid"
+	"github.com/hugo/actionsum/pkg/window"
 	"os"
 )
 

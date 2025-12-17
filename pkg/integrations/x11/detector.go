@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"actionsum/pkg/window"
+	"github.com/hugo/actionsum/pkg/window"
 )
 
 // Detector implements window.Detector for X11
@@ -74,30 +74,29 @@ func (d *Detector) getFocusedWindowXdotool() (*window.WindowInfo, error) {
 
 	windowTitle := strings.TrimSpace(string(windowNameOutput))
 
-	pidCmd := exec.Command("xdotool", "getwindowpid", windowID)
-	pidOutput, err := pidCmd.Output()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get window PID: %w", err)
-	}
-
-	pid := strings.TrimSpace(string(pidOutput))
-
-	psCmd := exec.Command("ps", "-p", pid, "-o", "comm=")
-	psOutput, err := psCmd.Output()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get process name: %w", err)
-	}
-
-	processName := strings.TrimSpace(string(psOutput))
-	appName := processName
-	if appName == "" {
-		appName = "Unknown"
-	}
+	// Try to get WM_CLASS first (works for Flatpak apps)
+	appName := "Unknown"
+	processName := ""
 
 	classCmd := exec.Command("xprop", "-id", windowID, "WM_CLASS")
 	if classOutput, err := classCmd.Output(); err == nil {
 		if class := parseWMClass(string(classOutput)); class != "" {
 			appName = class
+		}
+	}
+
+	// Try to get PID and process name (may fail for Flatpak/sandboxed apps)
+	pidCmd := exec.Command("xdotool", "getwindowpid", windowID)
+	if pidOutput, err := pidCmd.Output(); err == nil {
+		pid := strings.TrimSpace(string(pidOutput))
+
+		psCmd := exec.Command("ps", "-p", pid, "-o", "comm=")
+		if psOutput, err := psCmd.Output(); err == nil {
+			processName = strings.TrimSpace(string(psOutput))
+			// Only use process name if we didn't get WM_CLASS
+			if appName == "Unknown" && processName != "" {
+				appName = processName
+			}
 		}
 	}
 

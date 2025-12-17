@@ -1,12 +1,16 @@
-.PHONY: build install clean test test-verbose test-coverage bench run help
+.PHONY: build install clean test test-verbose test-coverage bench run help release
 
 BINARY_NAME=actionsum
 INSTALL_PATH=/usr/local/bin
+VERSION=$(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
+COMMIT=$(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+DATE=$(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
+LDFLAGS=-ldflags "-s -w -X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.date=$(DATE)"
 
 # Build the application
 build:
-	@echo "Building $(BINARY_NAME)..."
-	go build -o $(BINARY_NAME) ./cmd/actionsum
+	@echo "Building $(BINARY_NAME) $(VERSION)..."
+	go build $(LDFLAGS) -o $(BINARY_NAME) ./cmd/actionsum
 	@echo "Build complete: ./$(BINARY_NAME)"
 
 # Install to system
@@ -15,11 +19,18 @@ install: build
 	sudo cp $(BINARY_NAME) $(INSTALL_PATH)/
 	@echo "Installed successfully"
 
+# Uninstall from system
+uninstall:
+	@echo "Uninstalling $(BINARY_NAME)..."
+	sudo rm -f $(INSTALL_PATH)/$(BINARY_NAME)
+	@echo "Uninstalled successfully"
+
 # Clean build artifacts
 clean:
 	@echo "Cleaning..."
 	rm -f $(BINARY_NAME)
 	rm -f /tmp/actionsum.pid
+	rm -f coverage.out coverage.html
 	@echo "Clean complete"
 
 # Run tests

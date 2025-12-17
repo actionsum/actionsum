@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"actionsum/internal/models"
+	"github.com/hugo/actionsum/internal/models"
 
 	"github.com/pkg/errors"
 
@@ -123,6 +123,15 @@ func (r *Repository) CreateErrorLog(errorLog *models.ErrorLog) error {
 	result := r.db.Create(errorLog)
 	if result.Error != nil {
 		return errors.Wrap(result.Error, "failed to insert error log")
+	}
+	return nil
+}
+
+// Clear removes all focus events from the database
+func (r *Repository) Clear() error {
+	result := r.db.Exec("DELETE FROM focus_events")
+	if result.Error != nil {
+		return errors.Wrap(result.Error, "failed to clear focus events")
 	}
 	return nil
 }

@@ -8,10 +8,10 @@ import (
 	"strconv"
 	"time"
 
-	"actionsum/internal/config"
-	"actionsum/internal/database"
-	"actionsum/internal/models"
-	"actionsum/internal/reporter"
+	"github.com/hugo/actionsum/internal/config"
+	"github.com/hugo/actionsum/internal/database"
+	"github.com/hugo/actionsum/internal/models"
+	"github.com/hugo/actionsum/internal/reporter"
 )
 
 // Handler manages HTTP requests
@@ -178,6 +178,13 @@ func (h *Handler) handleSummary(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Check if request is from HTMX
+	if r.Header.Get("HX-Request") == "true" {
+		h.respondSummaryHTML(w, summaries, totalSeconds)
+		return
+	}
+
+	// Default JSON response
 	response := map[string]interface{}{
 		"period":        period,
 		"apps":          summaries,
@@ -187,6 +194,50 @@ func (h *Handler) handleSummary(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respondJSON(w, response)
+}
+
+// respondSummaryHTML renders summary data as HTML
+func (h *Handler) respondSummaryHTML(w http.ResponseWriter, summaries []models.AppSummary, totalSeconds int64) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+
+	if len(summaries) == 0 {
+		w.Write([]byte(`<div class="loading">No data available</div>`))
+		return
+	}
+
+	html := ""
+	for _, app := range summaries {
+		hours := int(app.TotalHours)
+		minutes := int(app.TotalMinutes) % 60
+		timeStr := ""
+		if hours > 0 {
+			timeStr = fmt.Sprintf("%dh %dm", hours, minutes)
+		} else {
+			timeStr = fmt.Sprintf("%dm", minutes)
+		}
+
+		html += fmt.Sprintf(`
+		<div class="app-item">
+			<span class="app-name">%s</span>
+			<div>
+				<span class="app-time">%s</span>
+				<span class="app-percentage">%.1f%%</span>
+			</div>
+		</div>`, app.AppName, timeStr, app.Percentage)
+	}
+
+	totalHours := int(totalSeconds / 3600)
+	totalMinutes := int(totalSeconds/60) % 60
+	totalStr := ""
+	if totalHours > 0 {
+		totalStr = fmt.Sprintf("%dh %dm", totalHours, totalMinutes)
+	} else {
+		totalStr = fmt.Sprintf("%dm", totalMinutes)
+	}
+
+	html += fmt.Sprintf(`<div class="total">Total: %s</div>`, totalStr)
+
+	w.Write([]byte(html))
 }
 
 // handleStatus returns current daemon status
@@ -225,27 +276,227 @@ func (h *Handler) handleHealth(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// handleIndex returns basic API information
+// handleIndex serves the main dashboard page
 func (h *Handler) handleIndex(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
 		http.NotFound(w, r)
 		return
 	}
 
-	info := map[string]interface{}{
-		"name":    "actionsum API",
-		"version": "0.1.0",
-		"endpoints": []map[string]string{
-			{"path": "/api/events", "description": "Get focus events (query: limit, period)"},
-			{"path": "/api/events/latest", "description": "Get latest focus event"},
-			{"path": "/api/report", "description": "Get time report (query: period=day|week|month)"},
-			{"path": "/api/summary", "description": "Get app usage summary (query: period=day|week|month)"},
-			{"path": "/api/status", "description": "Get daemon status"},
-			{"path": "/health", "description": "Health check"},
-		},
-	}
+	html := `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Actionsum Dashboard</title>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --bg-primary: #f5f5f5;
+            --bg-secondary: white;
+            --text-primary: #333;
+            --text-secondary: #1a1a1a;
+            --text-muted: #7f8c8d;
+            --border-color: #eee;
+            --border-strong: #ecf0f1;
+            --accent-color: #3498db;
+            --heading-color: #2c3e50;
+            --shadow: rgba(0,0,0,0.1);
+        }
+        
+        [data-theme="dark"] {
+            --bg-primary: #1a1a1a;
+            --bg-secondary: #2d2d2d;
+            --text-primary: #e0e0e0;
+            --text-secondary: #ffffff;
+            --text-muted: #a0a0a0;
+            --border-color: #404040;
+            --border-strong: #4a4a4a;
+            --accent-color: #5dade2;
+            --heading-color: #5dade2;
+            --shadow: rgba(0,0,0,0.3);
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: var(--bg-primary);
+            padding: 20px;
+            color: var(--text-primary);
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+        
+        h1 {
+            color: var(--text-secondary);
+            font-size: 2rem;
+            margin: 0;
+        }
+        
+        .theme-toggle {
+            background: var(--bg-secondary);
+            border: 2px solid var(--border-color);
+            border-radius: 50px;
+            padding: 8px 16px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .theme-toggle:hover {
+            border-color: var(--accent-color);
+            transform: scale(1.05);
+        }
+        
+        .dashboard {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .report-box {
+            flex: 1;
+            min-width: 300px;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            box-shadow: 0 2px 4px var(--shadow);
+            padding: 24px;
+            transition: background-color 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .report-box h2 {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            color: var(--heading-color);
+            border-bottom: 2px solid var(--accent-color);
+            padding-bottom: 10px;
+        }
+        
+        .app-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .app-item:last-child {
+            border-bottom: none;
+        }
+        
+        .app-name {
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+        
+        .app-time {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+        
+        .app-percentage {
+            color: var(--accent-color);
+            font-weight: 600;
+            margin-left: 10px;
+        }
+        
+        .loading {
+            color: var(--text-muted);
+            font-style: italic;
+        }
+        
+        .total {
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 2px solid var(--border-strong);
+            font-weight: 600;
+            font-size: 1.1rem;
+            color: var(--heading-color);
+        }
+        
+        @media (max-width: 1024px) {
+            .dashboard {
+                flex-direction: column;
+            }
+            
+            .report-box {
+                min-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Actionsum Dashboard</h1>
+        <button class="theme-toggle" onclick="toggleTheme()">
+            <span id="theme-icon">🌙</span>
+        </button>
+    </div>
+    <div class="dashboard">
+        <div class="report-box">
+            <h2>Today</h2>
+            <div hx-get="/api/summary?period=today" hx-trigger="load, every 30s" hx-swap="innerHTML">
+                <div class="loading">Loading...</div>
+            </div>
+        </div>
+        
+        <div class="report-box">
+            <h2>This Week</h2>
+            <div hx-get="/api/summary?period=week" hx-trigger="load, every 30s" hx-swap="innerHTML">
+                <div class="loading">Loading...</div>
+            </div>
+        </div>
+        
+        <div class="report-box">
+            <h2>This Month</h2>
+            <div hx-get="/api/summary?period=month" hx-trigger="load, every 30s" hx-swap="innerHTML">
+                <div class="loading">Loading...</div>
+            </div>
+        </div>
+    </div>
+    <script>
+        // Initialize theme from localStorage or system preference
+        function initTheme() {
+            const savedTheme = localStorage.getItem('theme');
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const theme = savedTheme || (prefersDark ? 'dark' : 'light');
+            setTheme(theme);
+        }
+        
+        function setTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            document.getElementById('theme-icon').textContent = theme === 'dark' ? '☀️' : '🌙';
+            localStorage.setItem('theme', theme);
+        }
+        
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            setTheme(newTheme);
+        }
+        
+        // Initialize on page load
+        initTheme();
+    </script>
+</body>
+</html>`
 
-	respondJSON(w, info)
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Write([]byte(html))
 }
 
 // getPeriod calculates the time range for a period type

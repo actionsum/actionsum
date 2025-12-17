@@ -60,7 +60,7 @@ func Default() *Config {
 			Path: "", // Empty means use default ~/.config/actionsum/actionsum.db
 		},
 		Tracker: TrackerConfig{
-			PollInterval:    60 * time.Second,  // 1 minute default
+			PollInterval:    10 * time.Second,  // 10 seconds default
 			MinPollInterval: 10 * time.Second,  // Minimum 10 seconds
 			MaxPollInterval: 300 * time.Second, // Maximum 5 minutes
 			IdleThreshold:   300 * time.Second, // 5 minutes idle threshold

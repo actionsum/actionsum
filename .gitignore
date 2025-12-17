@@ -1,4 +1,5 @@
 # Binaries
+actionsum
 *.exe
 *.exe~
 *.dll
@@ -28,11 +29,16 @@ Thumbs.db
 
 # Runtime
 /tmp/actionsum.pid
+/tmp/actionsum.log
 *.pid
 
 # Database
 *.db
 *.db-shm
 *.db-wal
+
+# Build artifacts
+dist/
+*.tar.gz
 
 .claude

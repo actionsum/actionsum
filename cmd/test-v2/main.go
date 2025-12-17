@@ -5,7 +5,7 @@ import (
 	"log"
 	"time"
 
-	"actionsum/pkg/detector"
+	"github.com/hugo/actionsum/pkg/detector"
 )
 
 func main() {
@@ -13,7 +13,7 @@ func main() {
 	fmt.Println("======================================")
 
 	// Create V2 detector
-	det, err := detector.NewV2()
+	det, err := detector.New()
 	if err != nil {
 		log.Fatalf("Failed to create detector: %v", err)
 	}

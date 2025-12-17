@@ -10,16 +10,22 @@ import (
 	"syscall"
 	"time"
 
-	"actionsum/internal/config"
-	"actionsum/internal/daemon"
-	"actionsum/internal/database"
-	"actionsum/internal/reporter"
-	"actionsum/internal/tracker"
-	"actionsum/internal/web"
-	"actionsum/pkg/detector"
+	"github.com/hugo/actionsum/internal/config"
+	"github.com/hugo/actionsum/internal/daemon"
+	"github.com/hugo/actionsum/internal/database"
+	"github.com/hugo/actionsum/internal/reporter"
+	"github.com/hugo/actionsum/internal/tracker"
+	"github.com/hugo/actionsum/internal/web"
+	"github.com/hugo/actionsum/pkg/detector"
 )
 
-const version = "0.1.0"
+var (
+	version = "0.1.0"
+	commit  = "unknown"
+	date    = "unknown"
+)
+
+const appName = "actionsum"
 
 func main() {
 	if len(os.Args) < 2 {
@@ -40,8 +46,12 @@ func main() {
 		showStatus()
 	case "report":
 		generateReport()
+	case "clear":
+		clearDatabase()
 	case "version":
 		fmt.Printf("actionsum version %s\n", version)
+		fmt.Printf("  commit: %s\n", commit)
+		fmt.Printf("  built:  %s\n", date)
 	case "help", "--help", "-h":
 		printUsage()
 	default:
@@ -63,6 +73,7 @@ Commands:
   stop               Stop the tracking daemon
   status             Show daemon status and current focused app
   report [period]    Generate time report (period: day, week, month)
+  clear              Clear all tracking data from database
   version            Show version information
   help               Show this help message
 
@@ -101,6 +112,25 @@ func startDaemon() {
 		log.Fatalf("Daemon is already running (PID: %d)", pid)
 	}
 
+	// Check if we should daemonize
+	if os.Getenv("ACTIONSUM_DAEMON_CHILD") != "1" {
+		// Parent process - fork and exit
+		daemonize(false)
+		return
+	}
+
+	// Child process - run the daemon
+	runStartDaemon(cfg, dm)
+}
+
+func runStartDaemon(cfg *config.Config, dm *daemon.Daemon) {
+	// Redirect logs to file
+	logFile, err := os.OpenFile("/tmp/actionsum.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	if err == nil {
+		log.SetOutput(logFile)
+		defer logFile.Close()
+	}
+
 	// Initialize database
 	db, err := database.Connect(cfg.Database.Path)
 	if err != nil {
@@ -119,7 +149,7 @@ func startDaemon() {
 	}
 	defer det.Close()
 
-	log.Printf("Using %s display server", det.GetDisplayServer())
+	log.Printf("Window detector initialized: %s", det.GetDisplayServer())
 
 	// Write PID file
 	if err := dm.WritePID(); err != nil {
@@ -263,6 +293,36 @@ func generateReport() {
 	}
 }
 
+func clearDatabase() {
+	cfg := config.New()
+
+	// Prompt for confirmation
+	fmt.Print("This will delete all tracking data. Are you sure? (yes/no): ")
+	var response string
+	fmt.Scanln(&response)
+
+	if response != "yes" && response != "y" {
+		fmt.Println("Operation cancelled")
+		return
+	}
+
+	// Initialize database
+	db, err := database.Connect(cfg.Database.Path)
+	if err != nil {
+		log.Fatalf("Failed to connect to database: %v", err)
+	}
+	defer db.Close()
+
+	repo := database.NewRepository(db)
+
+	// Clear the database
+	if err := repo.Clear(); err != nil {
+		log.Fatalf("Failed to clear database: %v", err)
+	}
+
+	fmt.Println("Database cleared successfully")
+}
+
 func serveDaemon() {
 	cfg := config.New()
 	if err := cfg.Validate(); err != nil {
@@ -277,6 +337,25 @@ func serveDaemon() {
 	}
 	if running {
 		log.Fatalf("Daemon is already running (PID: %d)", pid)
+	}
+
+	// Check if we should daemonize
+	if os.Getenv("ACTIONSUM_DAEMON_CHILD") != "1" {
+		// Parent process - fork and exit
+		daemonize(true)
+		return
+	}
+
+	// Child process - run the daemon
+	runServeDaemon(cfg, dm)
+}
+
+func runServeDaemon(cfg *config.Config, dm *daemon.Daemon) {
+	// Redirect logs to file or syslog in production
+	logFile, err := os.OpenFile("/tmp/actionsum.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	if err == nil {
+		log.SetOutput(logFile)
+		defer logFile.Close()
 	}
 
 	// Initialize database
@@ -297,7 +376,7 @@ func serveDaemon() {
 	}
 	defer det.Close()
 
-	log.Printf("Using %s display server", det.GetDisplayServer())
+	log.Printf("Window detector initialized: %s", det.GetDisplayServer())
 
 	// Write PID file
 	if err := dm.WritePID(); err != nil {
@@ -352,4 +431,34 @@ func serveDaemon() {
 	}
 
 	log.Println("Daemon stopped successfully")
+}
+
+func daemonize(withWeb bool) {
+	// Fork the process
+	env := os.Environ()
+	env = append(env, "ACTIONSUM_DAEMON_CHILD=1")
+
+	args := os.Args
+
+	procAttr := &os.ProcAttr{
+		Env:   env,
+		Files: []*os.File{nil, nil, nil}, // stdin, stdout, stderr to /dev/null
+		Sys: &syscall.SysProcAttr{
+			Setsid: true, // Create new session
+		},
+	}
+
+	process, err := os.StartProcess(args[0], args, procAttr)
+	if err != nil {
+		log.Fatalf("Failed to start daemon process: %v", err)
+	}
+
+	if withWeb {
+		fmt.Printf("Daemon started successfully (PID: %d)\n", process.Pid)
+		fmt.Println("Web API available at: http://localhost:8080")
+		fmt.Println("Logs: /tmp/actionsum.log")
+	} else {
+		fmt.Printf("Daemon started successfully (PID: %d)\n", process.Pid)
+		fmt.Println("Logs: /tmp/actionsum.log")
+	}
 }

@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	"actionsum/internal/config"
-	"actionsum/internal/database"
-	"actionsum/internal/models"
+	"github.com/hugo/actionsum/internal/config"
+	"github.com/hugo/actionsum/internal/database"
+	"github.com/hugo/actionsum/internal/models"
 )
 
 // Reporter handles report generation

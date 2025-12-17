@@ -3,7 +3,7 @@ package x11
 import (
 	"testing"
 
-	"actionsum/pkg/window"
+	"github.com/hugo/actionsum/pkg/window"
 )
 
 func TestNewDetector(t *testing.T) {

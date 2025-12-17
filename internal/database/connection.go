@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"actionsum/internal/models"
+	"github.com/hugo/actionsum/internal/models"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"

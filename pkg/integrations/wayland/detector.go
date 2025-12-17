@@ -6,7 +6,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"actionsum/pkg/window"
+	"github.com/hugo/actionsum/pkg/window"
 )
 
 // Detector implements window.Detector for Wayland

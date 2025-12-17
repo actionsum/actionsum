@@ -6,10 +6,10 @@ import (
 	"log"
 	"time"
 
-	"actionsum/internal/config"
-	"actionsum/internal/database"
-	"actionsum/internal/models"
-	"actionsum/pkg/window"
+	"github.com/hugo/actionsum/internal/config"
+	"github.com/hugo/actionsum/internal/database"
+	"github.com/hugo/actionsum/internal/models"
+	"github.com/hugo/actionsum/pkg/window"
 )
 
 type Service struct {
@@ -41,12 +41,12 @@ func (s *Service) Start(ctx context.Context) error {
 	ticker := time.NewTicker(s.config.Tracker.PollInterval)
 	defer ticker.Stop()
 
-	appName, err := s.trackOnce()
+	appName, isIdle, isLocked, err := s.trackOnce()
 	if err != nil {
 		s.storeError(err)
 	}
 	if appName != "" {
-		log.Printf("Initial track: %s", appName)
+		log.Printf("Initial track: %s (idle: %v, locked: %v)", appName, isIdle, isLocked)
 	}
 
 	for {
@@ -62,12 +62,12 @@ func (s *Service) Start(ctx context.Context) error {
 			return nil
 
 		case <-ticker.C:
-			appName, err := s.trackOnce()
+			appName, isIdle, isLocked, err := s.trackOnce()
 			if err != nil {
 				s.storeError(err)
 			}
 			if appName != "" {
-				log.Printf("Tracked: %s", appName)
+				log.Printf("Tracked: %s (idle: %v, locked: %v)", appName, isIdle, isLocked)
 			}
 		}
 	}
@@ -83,25 +83,25 @@ func (s *Service) IsRunning() bool {
 	return s.running
 }
 
-func (s *Service) trackOnce() (string, error) {
+func (s *Service) trackOnce() (string, bool, bool, error) {
 
 	idleInfo, err := s.detector.GetIdleInfo()
 	if err != nil {
-		return "", fmt.Errorf("failed to get idle info: %w", err)
+		return "", false, false, fmt.Errorf("failed to get idle info: %w", err)
 	}
 
 	if idleInfo.IsIdle || idleInfo.IsLocked {
 		log.Printf("Skipping tracking: idle=%v, locked=%v", idleInfo.IsIdle, idleInfo.IsLocked)
-		return "", nil
+		return "", idleInfo.IsIdle, idleInfo.IsLocked, nil
 	}
 
 	windowInfo, err := s.detector.GetFocusedWindow()
 	if err != nil {
-		return "", fmt.Errorf("failed to get focused window: %w", err)
+		return "", idleInfo.IsIdle, idleInfo.IsLocked, fmt.Errorf("failed to get focused window: %w", err)
 	}
 
 	if windowInfo == nil || windowInfo.AppName == "" {
-		return "", fmt.Errorf("no valid window information available")
+		return "", idleInfo.IsIdle, idleInfo.IsLocked, fmt.Errorf("no valid window information available")
 	}
 
 	event := &models.FocusEvent{
@@ -116,10 +116,10 @@ func (s *Service) trackOnce() (string, error) {
 	}
 
 	if err := s.repo.Create(event); err != nil {
-		return "", fmt.Errorf("failed to save event: %w", err)
+		return "", idleInfo.IsIdle, idleInfo.IsLocked, fmt.Errorf("failed to save event: %w", err)
 	}
 
-	return event.AppName, nil
+	return event.AppName, idleInfo.IsIdle, idleInfo.IsLocked, nil
 }
 
 func (s *Service) storeError(err error) {
@@ -134,6 +134,15 @@ func (s *Service) storeError(err error) {
 	} else {
 		log.Printf("Error logged to database: %v", err)
 	}
+}
+
+func (s *Service) IsScreenLocked() (bool, error) {
+	idleInfo, err := s.detector.GetIdleInfo()
+	if err != nil {
+		return false, fmt.Errorf("failed to get idle info: %w", err)
+	}
+
+	return idleInfo.IsLocked, nil
 }
 
 func (s *Service) GetCurrentWindow() (*window.WindowInfo, *window.IdleInfo, error) {

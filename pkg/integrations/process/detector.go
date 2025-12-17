@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"actionsum/pkg/integrations/common"
+	"github.com/hugo/actionsum/pkg/integrations/common"
 )
 
 // Detector monitors running processes to detect active applications
@@ -195,6 +195,25 @@ func (d *Detector) readProcessInfo(pid int) (*processInfo, error) {
 
 // isGUIApp checks if a process is likely a GUI application
 func (d *Detector) isGUIApp(info *processInfo) bool {
+	// Blacklist: processes that should never be considered GUI apps
+	blacklist := []string{
+		// Shells
+		"bash", "zsh", "fish", "sh", "dash", "tcsh", "ksh",
+		// System daemons
+		"goa-daemon", "goa-identity-service", "gvfs", "dbus-daemon", "systemd",
+		// Background services
+		"pulseaudio", "pipewire", "wireplumber", "bluetoothd",
+		// Other
+		"ssh-agent", "gpg-agent", "dconf-service",
+	}
+
+	// Check blacklist first
+	for _, blocked := range blacklist {
+		if info.name == blocked || strings.HasPrefix(info.name, blocked) {
+			return false
+		}
+	}
+
 	// Check against known GUI apps
 	for _, app := range d.guiApps {
 		if info.name == app || strings.Contains(info.cmdline, app) {
@@ -203,6 +222,7 @@ func (d *Detector) isGUIApp(info *processInfo) bool {
 	}
 
 	// Check if process has DISPLAY environment variable (indicates X11/XWayland)
+	// Only consider if not blacklisted above
 	environPath := filepath.Join("/proc", strconv.Itoa(info.pid), "environ")
 	if data, err := os.ReadFile(environPath); err == nil {
 		environ := string(data)
