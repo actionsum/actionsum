@@ -382,6 +382,6 @@ func daemonize(withWeb bool) {
 }
 
 func showVersion() {
-	fmt.Printf("version: %s\n", version.Version)
-	fmt.Printf("built  : %s\n", version.Date)
+	fmt.Printf("version -- %s\n", version.Version)
+	fmt.Printf("built ---- %s\n", version.Date)
 }

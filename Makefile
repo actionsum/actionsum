@@ -60,7 +60,7 @@ bump-version:
 	echo "" >> version/version.go; \
 	echo "const Version = \"$$NEW_VERSION\"" >> version/version.go; \
 	echo "const Date = \"$(DATE)\"" >> version/version.go; \
-	git add version/version.go; \
+	git add .; \
 	git commit -m "Bump version to $$NEW_VERSION"; \
 	git tag $$NEW_VERSION; \
  	NEW_VERSION=$$NEW_VERSION make push-git; \
