@@ -1,7 +1,6 @@
 .PHONY: build install clean test test-verbose test-coverage bench run help release bump-version
 
 BINARY_NAME=actionsum
-INSTALL_PATH=/usr/local/bin
 VERSION_FILE=version.json
 VERSION=$(shell jq -r '.version' $(VERSION_FILE) 2>/dev/null || echo "v0.0.0")
 COMMIT=$(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
@@ -19,9 +18,15 @@ build:
 
 # Push changes and tags to Git
 push-git:
-	git push origin $(NEW_VERSION)
+	@if [ -z "$(NEW_VERSION)" ]; then \
+		echo "Error: NEW_VERSION is required."; \
+		exit 1; \
+	fi
+	@echo "Pushing changes and tag $(NEW_VERSION) to GitHub..."
 	git push origin main
-	echo "Changes and tags pushed to Git."
+	git push origin $(NEW_VERSION)
+	@echo "Changes and tag pushed to GitHub successfully."
+	@echo "Create a release at: https://github.com/actionsum/actionsum/releases/new?tag=$(NEW_VERSION)"
 
 # Increment version and update version/version.go
 bump-version:
@@ -63,16 +68,18 @@ bump-version:
 	git add .; \
 	git commit -m "Bump version to $$NEW_VERSION"; \
 	git tag $$NEW_VERSION; \
- 	NEW_VERSION=$$NEW_VERSION make push-git; \
+	$(MAKE) push-git NEW_VERSION=$$NEW_VERSION; \
 	echo "Version bumped to $$NEW_VERSION, tagged, and pushed."
 
 git-tag:
 	@git describe --tags --abbrev=0
 
 # Install to system
-install: build
-	@echo "Installing $(BINARY_NAME) to $(INSTALL_PATH)..."
-	sudo cp $(BINARY_NAME) $(INSTALL_PATH)/
+install:
+	@echo "Installing $(BINARY_NAME) to $(whereis $(BINARY_NAME))..."
+	rm $(whereis $(BINARY_NAME)) 2>/dev/null || true
+	go install github.com/actionsum/actionsum@latest
+	$(BINARY_NAME) version
 	@echo "Installed successfully"
 
 # Uninstall from system
@@ -119,7 +126,7 @@ help:
 	@echo ""
 	@echo "Usage:"
 	@echo "  make build           Build the application"
-	@echo "  make install         Install to $(INSTALL_PATH)"
+	@echo "  make install         Install to $(whereis $(BINARY_NAME))"
 	@echo "  make clean           Remove build artifacts"
 	@echo "  make test            Run tests"
 	@echo "  make test-verbose    Run tests with verbose output"

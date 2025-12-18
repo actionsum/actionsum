@@ -17,7 +17,7 @@ go install actionsum@latest
 
 ### From Source
 ```bash
-git clone https://actionsum.git
+git clone https://github.com/actionsum/actionsum.git
 cd actionsum
 go build -o actionsum ./cmd/actionsum
 sudo mv actionsum /usr/local/bin/
