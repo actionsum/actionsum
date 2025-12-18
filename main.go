@@ -2,13 +2,11 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
-	"runtime/debug"
 	"syscall"
 	"time"
 
@@ -19,29 +17,8 @@ import (
 	"github.com/actionsum/actionsum/internal/tracker"
 	"github.com/actionsum/actionsum/internal/web"
 	"github.com/actionsum/actionsum/pkg/detector"
+	"github.com/actionsum/actionsum/version"
 )
-
-var (
-	version = "dev"     // Default value
-	date    = "unknown" // Default value
-)
-
-func init() {
-	// Try to get version from build info (works with go install)
-	if info, ok := debug.ReadBuildInfo(); ok {
-		if version == "dev" && info.Main.Version != "" && info.Main.Version != "(devel)" {
-			version = info.Main.Version
-		}
-		for _, setting := range info.Settings {
-			switch setting.Key {
-			case "vcs.time":
-				if date == "unknown" {
-					date = setting.Value
-				}
-			}
-		}
-	}
-}
 
 func main() {
 	if len(os.Args) < 2 {
@@ -107,7 +84,7 @@ Environment Variables:
   ACTIONSUM_EXCLUDE_IDLE     Exclude idle time from reports (true/false)
 
 Version: %s
-`, version)
+`, version.Version)
 }
 
 func startDaemon() {
@@ -404,30 +381,7 @@ func daemonize(withWeb bool) {
 	}
 }
 
-type VersionInfo struct {
-	Version string `json:"version"`
-	Date    string `json:"date"`
-}
-
 func showVersion() {
-	versionInfo := readVersionFile()
-	fmt.Printf("version: %s\n", versionInfo.Version)
-	fmt.Printf("built  : %s\n", versionInfo.Date)
-}
-
-func readVersionFile() VersionInfo {
-	file, err := os.Open("version.json")
-	if err != nil {
-		fmt.Println("Error: version.json not found. Ensure the file exists.")
-		os.Exit(1)
-	}
-	defer file.Close()
-
-	var versionInfo VersionInfo
-	if err := json.NewDecoder(file).Decode(&versionInfo); err != nil {
-		fmt.Println("Error: Failed to parse version.json.")
-		os.Exit(1)
-	}
-
-	return versionInfo
+	fmt.Printf("version: %s\n", version.Version)
+	fmt.Printf("built  : %s\n", version.Date)
 }

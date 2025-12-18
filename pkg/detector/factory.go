@@ -1,9 +1,10 @@
 package detector
 
 import (
+	"os"
+
 	"github.com/actionsum/actionsum/pkg/integrations/hybrid"
 	"github.com/actionsum/actionsum/pkg/window"
-	"os"
 )
 
 // New creates a new hybrid detector that works universally

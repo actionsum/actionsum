@@ -1,6 +1,6 @@
 # actionsum
 
-[![Go](https://img.shields.io/badge/Go-1.21%2B-00ADD8.svg?logo=go)](https://go.dev/) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) [![Linux](https://img.shields.io/badge/Linux-FCC624.svg?logo=linux&logoColor=black)](https://www.kernel.org/) [![Build](https://github.com/actionsum/actionsum/actions/workflows/build.yml/badge.svg)](https://github.com/actionsum/actionsum/actions)
+[![Go](https://img.shields.io/badge/Go-1.21%2B-00ADD8.svg?logo=go)](https://go.dev/) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) [![Linux](https://img.shields.io/badge/Linux-FCC624.svg?logo=linux&logoColor=black)](https://www.kernel.org/) [![Build](https://actionsum/actions/workflows/build.yml/badge.svg)](https://actionsum/actions)
 
 **actionsum** is a lightweight, Linux CLI daemon for tracking and reporting time spent in focused applications. It runs in the background, monitors your current app focus, and generates detailed time reports for productivity insights—accessible via terminal or web browser.
 
@@ -12,22 +12,22 @@ Perfect for developers, remote workers, and anyone tracking focus time on Linux 
 
 ### Via Go Install (Recommended)
 ```bash
-go install github.com/actionsum/actionsum@latest
+go install actionsum@latest
 ```
 
 ### From Source
 ```bash
-git clone https://github.com/actionsum/actionsum.git
+git clone https://actionsum.git
 cd actionsum
 go build -o actionsum ./cmd/actionsum
 sudo mv actionsum /usr/local/bin/
 ```
 
 ### From Release
-Download the latest binary from [Releases](https://github.com/actionsum/actionsum/releases):
+Download the latest binary from [Releases](https://actionsum/releases):
 ```bash
 # Download and install (replace VERSION and ARCH as needed)
-wget https://github.com/actionsum/actionsum/releases/download/v0.1.0/actionsum_0.1.0_linux_amd64.tar.gz
+wget https://actionsum/releases/download/v0.1.0/actionsum_0.1.0_linux_amd64.tar.gz
 tar -xzf actionsum_0.1.0_linux_amd64.tar.gz
 sudo mv actionsum /usr/local/bin/
 ```
