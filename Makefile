@@ -43,6 +43,8 @@ bump-version:
 	MAJOR=$$(echo $$CURRENT_VERSION | cut -d. -f1 | tr -d 'v'); \
 	MINOR=$$(echo $$CURRENT_VERSION | cut -d. -f2); \
 	PATCH=$$(echo $$CURRENT_VERSION | cut -d. -f3); \
+	if [ -z "$$MAJOR" ]; then MAJOR=0; fi; \
+	if [ -z "$$MINOR" ]; then MINOR=0; fi; \
 	if [ -z "$$PATCH" ]; then PATCH=0; fi; \
 	case "$(TYPE)" in \
 		major) MAJOR=$$((MAJOR + 1)); MINOR=0; PATCH=0 ;; \
@@ -61,8 +63,11 @@ bump-version:
 	git add version/version.go; \
 	git commit -m "Bump version to $$NEW_VERSION"; \
 	git tag $$NEW_VERSION; \
-	# NEW_VERSION=$$NEW_VERSION make push-git; \
+ 	NEW_VERSION=$$NEW_VERSION make push-git; \
 	echo "Version bumped to $$NEW_VERSION, tagged, and pushed."
+
+git-tag:
+	@git describe --tags --abbrev=0
 
 # Install to system
 install: build
