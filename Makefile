@@ -51,7 +51,7 @@ bump-version:
 	echo '  "date": "$(DATE)"' >> $(VERSION_FILE); \
 	echo '}' >> $(VERSION_FILE); 
 	@git add .
-	@git --no-pager add $(VERSION_FILE); \
+	@git add $(VERSION_FILE); \
 	git --no-pager commit -m "Bump version to $$NEW_VERSION"; \
 	git --no-pager tag $$NEW_VERSION; \
 	NEW_VERSION=$$NEW_VERSION make push-git; \
