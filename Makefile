@@ -54,7 +54,7 @@ bump-version:
 	git add .; \
 	git commit -m "Bump version to $$NEW_VERSION"; \
 	git tag $$NEW_VERSION; \
-# 	NEW_VERSION=$$NEW_VERSION make push-git; \
+	NEW_VERSION=$$NEW_VERSION make push-git; \
 	echo "Version bumped to $$NEW_VERSION, tagged, and pushed."
 
 # Install to system
