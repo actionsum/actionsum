@@ -7,6 +7,7 @@ VERSION=$(shell jq -r '.version' $(VERSION_FILE) 2>/dev/null || echo "v0.0.0")
 COMMIT=$(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 DATE=$(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 LDFLAGS=-ldflags "-s -w -X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.date=$(DATE)"
+NEW_VERSION=
 
 # Build the application
 build:
@@ -15,6 +16,12 @@ build:
 	@echo "Running tests..."
 	go test ./...
 	@echo "Build complete: ./$(BINARY_NAME)"
+
+# Push changes and tags to Git
+push-git:
+	git --no-pager push origin $(NEW_VERSION) \
+	git --no-pager push origin main \
+	echo "Changes and tags pushed to Git."
 
 # Increment version and update version.json
 bump-version:
@@ -47,8 +54,7 @@ bump-version:
 	git --no-pager add $(VERSION_FILE); \
 	git --no-pager commit -m "Bump version to $$NEW_VERSION"; \
 	git --no-pager tag $$NEW_VERSION; \
-	git --no-pager push origin $$NEW_VERSION; \
-	git --no-pager push origin main; \
+	NEW_VERSION=$$NEW_VERSION make push-git; \
 	echo "Version bumped to $$NEW_VERSION, tagged, and pushed."
 
 # Install to system
