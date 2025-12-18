@@ -38,6 +38,7 @@ bump-version:
 	@MAJOR=$$(echo $(VERSION) | cut -d. -f1 | tr -d 'v'); \
 	MINOR=$$(echo $(VERSION) | cut -d. -f2); \
 	PATCH=$$(echo $(VERSION) | cut -d. -f3); \
+	if [ -z "$$PATCH" ]; then PATCH=0; fi; \
 	case "$(TYPE)" in \
 		major) MAJOR=$$((MAJOR + 1)); MINOR=0; PATCH=0 ;; \
 		feat) MINOR=$$((MINOR + 1)); PATCH=0 ;; \
@@ -49,11 +50,10 @@ bump-version:
 	echo '{' > $(VERSION_FILE); \
 	echo '  "version": "'$$NEW_VERSION'",' >> $(VERSION_FILE); \
 	echo '  "date": "$(DATE)"' >> $(VERSION_FILE); \
-	echo '}' >> $(VERSION_FILE); 
-	@git add .
-	@git add $(VERSION_FILE); \
-	git --no-pager commit -m "Bump version to $$NEW_VERSION"; \
-	git --no-pager tag $$NEW_VERSION; \
+	echo '}' >> $(VERSION_FILE); \
+	git add .; \
+	git commit -m "Bump version to $$NEW_VERSION"; \
+	git tag $$NEW_VERSION; \
 # 	NEW_VERSION=$$NEW_VERSION make push-git; \
 	echo "Version bumped to $$NEW_VERSION, tagged, and pushed."
 
