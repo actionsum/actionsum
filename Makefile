@@ -23,7 +23,7 @@ push-git:
 		exit 1; \
 	fi
 	@echo "Pushing changes and tag $(NEW_VERSION) to GitHub..."
-	git push origin main
+	git push origin master
 	git push origin $(NEW_VERSION)
 	@echo "Changes and tag pushed to GitHub successfully."
 	@echo "Create a release at: https://github.com/actionsum/actionsum/releases/new?tag=$(NEW_VERSION)"
