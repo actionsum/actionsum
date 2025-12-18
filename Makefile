@@ -82,12 +82,6 @@ install:
 	$(BINARY_NAME) version
 	@echo "Installed successfully"
 
-# Uninstall from system
-uninstall:
-	@echo "Uninstalling $(BINARY_NAME)..."
-	sudo rm -f $(INSTALL_PATH)/$(BINARY_NAME)
-	@echo "Uninstalled successfully"
-
 # Clean build artifacts
 clean:
 	@echo "Cleaning..."
