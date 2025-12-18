@@ -19,8 +19,8 @@ build:
 
 # Push changes and tags to Git
 push-git:
-	git --no-pager push origin $(NEW_VERSION) \
-	git --no-pager push origin main \
+	git push origin $(NEW_VERSION) \
+	git push origin main \
 	echo "Changes and tags pushed to Git."
 
 # Increment version and update version.json
@@ -54,7 +54,7 @@ bump-version:
 	@git add $(VERSION_FILE); \
 	git --no-pager commit -m "Bump version to $$NEW_VERSION"; \
 	git --no-pager tag $$NEW_VERSION; \
-	NEW_VERSION=$$NEW_VERSION make push-git; \
+# 	NEW_VERSION=$$NEW_VERSION make push-git; \
 	echo "Version bumped to $$NEW_VERSION, tagged, and pushed."
 
 # Install to system
