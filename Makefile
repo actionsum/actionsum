@@ -44,11 +44,11 @@ bump-version:
 	echo '  "date": "$(DATE)"' >> $(VERSION_FILE); \
 	echo '}' >> $(VERSION_FILE); \
 	git add .
-	git add $(VERSION_FILE); \
-	git commit -m "Bump version to $$NEW_VERSION"; \
-	git tag $$NEW_VERSION; \
-	git push origin $$NEW_VERSION; \
-	git push origin main; \
+	git --no-pager add $(VERSION_FILE); \
+	git --no-pager commit -m "Bump version to $$NEW_VERSION"; \
+	git --no-pager tag $$NEW_VERSION; \
+	git --no-pager push origin $$NEW_VERSION; \
+	git --no-pager push origin main; \
 	echo "Version bumped to $$NEW_VERSION, tagged, and pushed."
 
 # Install to system
