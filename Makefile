@@ -19,8 +19,8 @@ build:
 
 # Push changes and tags to Git
 push-git:
-	git push origin $(NEW_VERSION) \
-	git push origin main \
+	git push origin $(NEW_VERSION)
+	git push origin main
 	echo "Changes and tags pushed to Git."
 
 # Increment version and update version.json
