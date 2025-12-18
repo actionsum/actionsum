@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -21,9 +22,8 @@ import (
 )
 
 var (
-	version = "dev"
-	commit  = "unknown"
-	date    = "unknown"
+	version = "dev"     // Default value
+	date    = "unknown" // Default value
 )
 
 func init() {
@@ -34,10 +34,6 @@ func init() {
 		}
 		for _, setting := range info.Settings {
 			switch setting.Key {
-			case "vcs.revision":
-				if commit == "unknown" && len(setting.Value) >= 7 {
-					commit = setting.Value[:7]
-				}
 			case "vcs.time":
 				if date == "unknown" {
 					date = setting.Value
@@ -46,8 +42,6 @@ func init() {
 		}
 	}
 }
-
-const appName = "actionsum"
 
 func main() {
 	if len(os.Args) < 2 {
@@ -71,9 +65,7 @@ func main() {
 	case "clear":
 		clearDatabase()
 	case "version":
-		fmt.Printf("actionsum version %s\n", version)
-		fmt.Printf("  commit: %s\n", commit)
-		fmt.Printf("  built:  %s\n", date)
+		showVersion()
 	case "help", "--help", "-h":
 		printUsage()
 	default:
@@ -410,4 +402,32 @@ func daemonize(withWeb bool) {
 		fmt.Printf("Daemon started successfully (PID: %d)\n", process.Pid)
 		fmt.Printf("Logs: %s\n", logPath)
 	}
+}
+
+type VersionInfo struct {
+	Version string `json:"version"`
+	Date    string `json:"date"`
+}
+
+func showVersion() {
+	versionInfo := readVersionFile()
+	fmt.Printf("version: %s\n", versionInfo.Version)
+	fmt.Printf("built  : %s\n", versionInfo.Date)
+}
+
+func readVersionFile() VersionInfo {
+	file, err := os.Open("version.json")
+	if err != nil {
+		fmt.Println("Error: version.json not found. Ensure the file exists.")
+		os.Exit(1)
+	}
+	defer file.Close()
+
+	var versionInfo VersionInfo
+	if err := json.NewDecoder(file).Decode(&versionInfo); err != nil {
+		fmt.Println("Error: Failed to parse version.json.")
+		os.Exit(1)
+	}
+
+	return versionInfo
 }
