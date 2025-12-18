@@ -360,13 +360,22 @@ func runServeDaemon(cfg *config.Config, dm *daemon.Daemon) {
 func daemonize(withWeb bool) {
 	env := os.Environ()
 	env = append(env, "ACTIONSUM_DAEMON_CHILD=1")
+
+	// Get the absolute path to the current executable
+	executable, err := os.Executable()
+	if err != nil {
+		log.Fatalf("Failed to get executable path: %v", err)
+	}
+
 	args := os.Args
+	args[0] = executable // Use absolute path instead of argv[0]
+
 	procAttr := &os.ProcAttr{
 		Env:   env,
 		Files: []*os.File{nil, nil, nil},
 		Sys:   &syscall.SysProcAttr{Setsid: true},
 	}
-	process, err := os.StartProcess(args[0], args, procAttr)
+	process, err := os.StartProcess(executable, args, procAttr)
 	if err != nil {
 		log.Fatalf("Failed to start daemon process: %v", err)
 	}
