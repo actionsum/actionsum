@@ -101,6 +101,7 @@ func (r *Repository) GetLatest() (*models.FocusEvent, error) {
 
 // Update updates an existing focus event
 func (r *Repository) Update(event *models.FocusEvent) error {
+	event.AppName = strings.ToLower(event.AppName)
 	result := r.db.Save(event)
 	if result.Error != nil {
 		return errors.Wrap(result.Error, "failed to update event")
