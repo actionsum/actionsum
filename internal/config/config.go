@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"os"
 	"time"
 )
 
@@ -62,11 +63,11 @@ func Default() *Config {
 		Tracker: TrackerConfig{
 			PollInterval:    10 * time.Second,  // 10 seconds default
 			MinPollInterval: 10 * time.Second,  // Minimum 10 seconds
-			MaxPollInterval: 300 * time.Second, // Maximum 5 minutes
+			MaxPollInterval: 300 * time.Second, // Maximum allowed poll interval
 			IdleThreshold:   300 * time.Second, // 5 minutes idle threshold
 		},
 		Daemon: DaemonConfig{
-			PIDFile: "/tmp/actionsum.pid",
+			PIDFile: fmt.Sprintf("/tmp/actionsum-%d.pid", os.Getuid()),
 		},
 		Report: ReportConfig{
 			ExcludeIdle: true, // Exclude idle time by default
@@ -74,7 +75,7 @@ func Default() *Config {
 		},
 		Web: WebConfig{
 			Host: "localhost",
-			Port: 8080,
+			Port: os.Getuid(), // Default port based on user PID
 		},
 	}
 }

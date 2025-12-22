@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -21,6 +22,10 @@ import (
 )
 
 func main() {
+	// Parse flags
+	customPort := flag.Int("p", 0, "Custom port to run the server on")
+	flag.Parse()
+
 	if len(os.Args) < 2 {
 		printUsage()
 		os.Exit(1)
@@ -32,7 +37,7 @@ func main() {
 	case "start":
 		startDaemon()
 	case "serve":
-		serveDaemon()
+		serveDaemon(*customPort)
 	case "stop":
 		stopDaemon()
 	case "status":
@@ -103,7 +108,7 @@ func startDaemon() {
 	}
 
 	if os.Getenv("ACTIONSUM_DAEMON_CHILD") != "1" {
-		daemonize(false)
+		daemonize(false, cfg)
 		return
 	}
 
@@ -279,7 +284,7 @@ func clearDatabase() {
 	fmt.Println("Database cleared successfully")
 }
 
-func serveDaemon() {
+func serveDaemon(customPort int) {
 	cfg := config.New()
 	if err := cfg.Validate(); err != nil {
 		log.Fatalf("Invalid configuration: %v", err)
@@ -293,13 +298,13 @@ func serveDaemon() {
 		log.Fatalf("Daemon is already running (PID: %d)", pid)
 	}
 	if os.Getenv("ACTIONSUM_DAEMON_CHILD") != "1" {
-		daemonize(true)
+		daemonize(true, cfg)
 		return
 	}
-	runServeDaemon(cfg, dm)
+	runServeDaemon(cfg, dm, customPort)
 }
 
-func runServeDaemon(cfg *config.Config, dm *daemon.Daemon) {
+func runServeDaemon(cfg *config.Config, dm *daemon.Daemon, customPort int) {
 	logPath := fmt.Sprintf("/tmp/actionsum-%d.log", os.Getuid())
 	logFile, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 	if err == nil {
@@ -326,7 +331,7 @@ func runServeDaemon(cfg *config.Config, dm *daemon.Daemon) {
 	defer dm.RemovePID()
 	repo := database.NewRepository(db)
 	trackerSvc := tracker.NewService(cfg, repo, det)
-	webServer := web.NewServer(cfg, repo)
+	webServer := web.NewServer(cfg, repo, customPort)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	sigChan := make(chan os.Signal, 1)
@@ -357,7 +362,7 @@ func runServeDaemon(cfg *config.Config, dm *daemon.Daemon) {
 	log.Println("Daemon stopped successfully")
 }
 
-func daemonize(withWeb bool) {
+func daemonize(withWeb bool, cfg *config.Config) {
 	env := os.Environ()
 	env = append(env, "ACTIONSUM_DAEMON_CHILD=1")
 
@@ -382,7 +387,7 @@ func daemonize(withWeb bool) {
 	logPath := fmt.Sprintf("/tmp/actionsum-%d.log", os.Getuid())
 	if withWeb {
 		fmt.Printf("Daemon started successfully (PID: %d)\n", process.Pid)
-		fmt.Println("Web API available at: http://localhost:8080")
+		fmt.Printf("Web API available at: http://localhost:%d\n", cfg.Web.Port)
 		fmt.Printf("Logs: %s\n", logPath)
 	} else {
 		fmt.Printf("Daemon started successfully (PID: %d)\n", process.Pid)

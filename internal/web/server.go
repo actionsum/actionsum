@@ -19,12 +19,18 @@ type Server struct {
 }
 
 // NewServer creates a new web server
-func NewServer(cfg *config.Config, repo *database.Repository) *Server {
+// Updated to allow custom port via -p flag
+func NewServer(cfg *config.Config, repo *database.Repository, customPort int) *Server {
 	handler := NewHandler(cfg, repo)
 	mux := http.NewServeMux()
 	handler.SetupRoutes(mux)
 
-	addr := fmt.Sprintf("%s:%d", cfg.Web.Host, cfg.Web.Port)
+	port := cfg.Web.Port
+	if customPort > 0 {
+		port = customPort
+	}
+
+	addr := fmt.Sprintf("%s:%d", cfg.Web.Host, port)
 	httpServer := &http.Server{
 		Addr:         addr,
 		Handler:      mux,

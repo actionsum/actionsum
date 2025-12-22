@@ -80,11 +80,11 @@ func (d *Daemon) IsRunning() (bool, int, error) {
 func (d *Daemon) Stop() error {
 	running, pid, err := d.IsRunning()
 	if err != nil {
-		return err
+		return fmt.Errorf("error checking daemon status: %w", err)
 	}
 
 	if !running {
-		return fmt.Errorf("daemon is not running")
+		return fmt.Errorf("daemon is not running or PID file is stale")
 	}
 
 	process, err := os.FindProcess(pid)
@@ -92,11 +92,20 @@ func (d *Daemon) Stop() error {
 		return fmt.Errorf("failed to find process: %w", err)
 	}
 
-	// Send SIGTERM
+	// Attempt to send SIGTERM
 	if err := process.Signal(syscall.SIGTERM); err != nil {
+		if err.Error() == "os: process already finished" {
+			// Process already terminated, clean up PID file
+			_ = d.RemovePID()
+			return fmt.Errorf("daemon process already terminated")
+		}
 		return fmt.Errorf("failed to send SIGTERM: %w", err)
 	}
 
 	// Remove PID file
-	return d.RemovePID()
+	if err := d.RemovePID(); err != nil {
+		return fmt.Errorf("failed to remove PID file: %w", err)
+	}
+
+	return nil
 }
