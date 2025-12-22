@@ -279,6 +279,7 @@ func (h *Handler) handleIndex(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// HTML template for the dashboard
 	html := `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -426,6 +427,35 @@ func (h *Handler) handleIndex(w http.ResponseWriter, r *http.Request) {
             font-weight: 600;
             font-size: 1.1rem;
             color: var(--heading-color);
+        }
+
+        .listing {
+            overflow-y: auto;
+            overflow-x: hidden; /* Ensure horizontal scroll is disabled */
+            max-height: calc(100vh - 200px); /* Adjust based on header/footer */
+            scrollbar-width: thin; /* For Firefox */
+            scrollbar-color: var(--accent-color) var(--bg-secondary); /* Custom scrollbar colors */
+        }
+
+        .listing::-webkit-scrollbar {
+            width: 12px; /* Width of the scrollbar */
+        }
+
+        .listing::-webkit-scrollbar-track {
+            background: var(--bg-secondary); /* Background of the scrollbar track */
+        }
+
+        .listing::-webkit-scrollbar-thumb {
+            background-color: var(--accent-color); /* Scrollbar color */
+            border-radius: 20px; /* Rounded corners */
+            border: 3px solid var(--bg-secondary); /* Space around the scrollbar */
+        }
+
+        @media (max-width: 768px) {
+            .listing {
+                max-height: none;
+                height: 10em; /* Fixed height for narrow screens */
+            }
         }
         
         @media (max-width: 1024px) {

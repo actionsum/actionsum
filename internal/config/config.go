@@ -75,7 +75,7 @@ func Default() *Config {
 		},
 		Web: WebConfig{
 			Host: "localhost",
-			Port: os.Getuid(), // Default port based on user PID
+			Port: 10000 + os.Getuid(), // Default port based on user PID
 		},
 	}
 }
