@@ -2,6 +2,7 @@ package database
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/actionsum/actionsum/internal/models"
@@ -23,6 +24,7 @@ func NewRepository(db *DB) *Repository {
 
 // Create inserts a new focus event into the database
 func (r *Repository) Create(event *models.FocusEvent) error {
+	event.AppName = strings.ToLower(event.AppName)
 	result := r.db.Create(event)
 	if result.Error != nil {
 		return errors.Wrap(result.Error, "failed to insert focus event")
@@ -134,4 +136,13 @@ func (r *Repository) Clear() error {
 		return errors.Wrap(result.Error, "failed to clear focus events")
 	}
 	return nil
+}
+
+// NormalizeAppNames updates all app_name values to lowercase
+func (r *Repository) NormalizeAppNames() (int64, error) {
+	result := r.db.Exec("UPDATE focus_events SET app_name = LOWER(app_name)")
+	if result.Error != nil {
+		return 0, errors.Wrap(result.Error, "failed to normalize app names")
+	}
+	return result.RowsAffected, nil
 }
