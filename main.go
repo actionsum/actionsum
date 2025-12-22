@@ -59,6 +59,8 @@ func main() {
 		handler.generateReport()
 	case "clear":
 		handler.clearDatabase()
+	case "normalize":
+		handler.normalizeDatabase()
 	case "version":
 		showVersion()
 	case "help", "--help", "-h":
@@ -83,6 +85,7 @@ Commands:
   status             Show daemon status and current focused app
   report [period]    Generate time report (period: day, week, month)
   clear              Clear all tracking data from database
+  normalize          Normalize all app names to lowercase
   version            Show version information
   help               Show this help message
 
@@ -265,6 +268,20 @@ func (h *CommandHandler) clearDatabase() {
 		log.Fatalf("Failed to clear database: %v", err)
 	}
 	fmt.Println("Database cleared successfully")
+}
+
+func (h *CommandHandler) normalizeDatabase() {
+	db, err := database.Connect(h.cfg.Database.Path)
+	if err != nil {
+		log.Fatalf("Failed to connect to database: %v", err)
+	}
+	defer db.Close()
+	repo := database.NewRepository(db)
+	count, err := repo.NormalizeAppNames()
+	if err != nil {
+		log.Fatalf("Failed to normalize app names: %v", err)
+	}
+	fmt.Printf("Normalized %d records\n", count)
 }
 
 func (h *CommandHandler) serveDaemon(customPort int) {
