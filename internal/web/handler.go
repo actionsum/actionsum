@@ -220,13 +220,13 @@ func (h *Handler) respondSummaryHTML(w http.ResponseWriter, summaries []models.A
 		}
 
 		html += fmt.Sprintf(`
-		<div class="app-item">
+		<div class="app-item" style="--bar-width: %.1f%%">
 			<span class="app-name">%s</span>
 			<div>
 				<span class="app-time">%s</span>
 				<span class="app-percentage">%s</span>
 			</div>
-		</div>`, app.AppName, timeStr, percentStr)
+		</div>`, app.Percentage, app.AppName, timeStr, percentStr)
 	}
 	html += `</div>`
 
@@ -342,7 +342,12 @@ func (h *Handler) handleIndex(w http.ResponseWriter, r *http.Request) {
             margin: 0;
         }
         
-        .theme-toggle {
+        .header-controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        .header-btn {
             background: var(--bg-secondary);
             border: 2px solid var(--border-color);
             border-radius: 50px;
@@ -354,10 +359,15 @@ func (h *Handler) handleIndex(w http.ResponseWriter, r *http.Request) {
             align-items: center;
             gap: 8px;
         }
-        
-        .theme-toggle:hover {
+
+        .header-btn:hover {
             border-color: var(--accent-color);
             transform: scale(1.05);
+        }
+
+        .header-btn.active {
+            border-color: var(--accent-color);
+            background: var(--accent-color);
         }
         
         .dashboard {
@@ -388,10 +398,36 @@ func (h *Handler) handleIndex(w http.ResponseWriter, r *http.Request) {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 12px 0;
+            padding: 12px 8px;
             border-bottom: 1px solid var(--border-color);
+            position: relative;
+            border-radius: 4px;
+            transition: background 0.3s ease;
         }
-        
+
+        .app-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: var(--bar-width, 0%);
+            background: var(--accent-color);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            border-radius: 4px;
+            z-index: 0;
+        }
+
+        [data-bars="true"] .app-item::before {
+            opacity: 0.2;
+        }
+
+        .app-item > * {
+            position: relative;
+            z-index: 1;
+        }
+
         .app-item:last-child {
             border-bottom: none;
         }
@@ -477,9 +513,14 @@ func (h *Handler) handleIndex(w http.ResponseWriter, r *http.Request) {
 <body>
     <div class="header">
         <h1>Actionsum Dashboard</h1>
-        <button class="theme-toggle" onclick="toggleTheme()">
-            <span id="theme-icon">🌙</span>
-        </button>
+        <div class="header-controls">
+            <button class="header-btn" onclick="toggleBars()" title="Toggle bar chart">
+                <span id="bars-icon">📊</span>
+            </button>
+            <button class="header-btn" onclick="toggleTheme()" title="Toggle theme">
+                <span id="theme-icon">🌙</span>
+            </button>
+        </div>
     </div>
     <div class="dashboard">
         <div class="report-box">
@@ -524,8 +565,32 @@ func (h *Handler) handleIndex(w http.ResponseWriter, r *http.Request) {
             setTheme(newTheme);
         }
         
+        // Initialize bar chart state
+        function initBars() {
+            const savedBars = localStorage.getItem('bars');
+            const showBars = savedBars === 'true';
+            setBars(showBars);
+        }
+
+        function setBars(show) {
+            document.documentElement.setAttribute('data-bars', show);
+            const btn = document.querySelector('button[onclick="toggleBars()"]');
+            if (show) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+            localStorage.setItem('bars', show);
+        }
+
+        function toggleBars() {
+            const current = document.documentElement.getAttribute('data-bars') === 'true';
+            setBars(!current);
+        }
+
         // Initialize on page load
         initTheme();
+        initBars();
     </script>
 </body>
 </html>`
