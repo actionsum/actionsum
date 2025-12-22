@@ -206,7 +206,7 @@ func (h *Handler) respondSummaryHTML(w http.ResponseWriter, summaries []models.A
 		return
 	}
 
-	html := ""
+	html := `<div class="listing">`
 	for _, app := range summaries {
 		// Show the highest round unit (h, m, or s)
 		timeStr := utils.FormatRoundedUnit(app.TotalSeconds)
@@ -228,6 +228,7 @@ func (h *Handler) respondSummaryHTML(w http.ResponseWriter, summaries []models.A
 			</div>
 		</div>`, app.AppName, timeStr, percentStr)
 	}
+	html += `</div>`
 
 	totalStr := utils.FormatRoundedUnit(totalSeconds)
 
@@ -431,30 +432,34 @@ func (h *Handler) handleIndex(w http.ResponseWriter, r *http.Request) {
 
         .listing {
             overflow-y: auto;
-            overflow-x: hidden; /* Ensure horizontal scroll is disabled */
-            max-height: calc(100vh - 200px); /* Adjust based on header/footer */
-            scrollbar-width: thin; /* For Firefox */
-            scrollbar-color: var(--accent-color) var(--bg-secondary); /* Custom scrollbar colors */
+            overflow-x: hidden;
+            max-height: calc(100vh - 320px);
+            scrollbar-width: thin;
+            scrollbar-color: var(--accent-color) var(--bg-secondary);
         }
 
         .listing::-webkit-scrollbar {
-            width: 12px; /* Width of the scrollbar */
+            width: 10px;
         }
 
         .listing::-webkit-scrollbar-track {
-            background: var(--bg-secondary); /* Background of the scrollbar track */
+            background: var(--border-color);
+            border-radius: 10px;
         }
 
         .listing::-webkit-scrollbar-thumb {
-            background-color: var(--accent-color); /* Scrollbar color */
-            border-radius: 20px; /* Rounded corners */
-            border: 3px solid var(--bg-secondary); /* Space around the scrollbar */
+            background-color: var(--accent-color);
+            border-radius: 10px;
+            border: 2px solid var(--border-color);
+        }
+
+        .listing::-webkit-scrollbar-thumb:hover {
+            background-color: var(--heading-color);
         }
 
         @media (max-width: 768px) {
             .listing {
-                max-height: none;
-                height: 10em; /* Fixed height for narrow screens */
+                max-height: 450px;
             }
         }
         

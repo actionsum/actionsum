@@ -21,6 +21,18 @@ import (
 	"github.com/actionsum/actionsum/version"
 )
 
+// CommandHandler handles all CLI commands with shared configuration
+type CommandHandler struct {
+	cfg *config.Config
+}
+
+// NewCommandHandler creates a new command handler with configuration
+func NewCommandHandler() *CommandHandler {
+	return &CommandHandler{
+		cfg: config.New(),
+	}
+}
+
 func main() {
 	// Parse flags
 	customPort := flag.Int("p", 0, "Custom port to run the server on")
@@ -32,20 +44,21 @@ func main() {
 	}
 
 	command := os.Args[1]
+	handler := NewCommandHandler()
 
 	switch command {
 	case "start":
-		startDaemon()
+		handler.startDaemon()
 	case "serve":
-		serveDaemon(*customPort)
+		handler.serveDaemon(*customPort)
 	case "stop":
-		stopDaemon()
+		handler.stopDaemon()
 	case "status":
-		showStatus()
+		handler.showStatus()
 	case "report":
-		generateReport()
+		handler.generateReport()
 	case "clear":
-		clearDatabase()
+		handler.clearDatabase()
 	case "version":
 		showVersion()
 	case "help", "--help", "-h":
@@ -92,13 +105,12 @@ Version: %s
 `, version.Version)
 }
 
-func startDaemon() {
-	cfg := config.New()
-	if err := cfg.Validate(); err != nil {
+func (h *CommandHandler) startDaemon() {
+	if err := h.cfg.Validate(); err != nil {
 		log.Fatalf("Invalid configuration: %v", err)
 	}
 
-	dm := daemon.New(cfg.Daemon.PIDFile)
+	dm := daemon.New(h.cfg.Daemon.PIDFile)
 	running, pid, err := dm.IsRunning()
 	if err != nil {
 		log.Fatalf("Failed to check daemon status: %v", err)
@@ -108,14 +120,14 @@ func startDaemon() {
 	}
 
 	if os.Getenv("ACTIONSUM_DAEMON_CHILD") != "1" {
-		daemonize(false, cfg)
+		h.daemonize(false)
 		return
 	}
 
-	runStartDaemon(cfg, dm)
+	h.runStartDaemon(dm)
 }
 
-func runStartDaemon(cfg *config.Config, dm *daemon.Daemon) {
+func (h *CommandHandler) runStartDaemon(dm *daemon.Daemon) {
 	logPath := fmt.Sprintf("/tmp/actionsum-%d.log", os.Getuid())
 	logFile, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 	if err == nil {
@@ -123,7 +135,7 @@ func runStartDaemon(cfg *config.Config, dm *daemon.Daemon) {
 		defer logFile.Close()
 	}
 
-	db, err := database.Connect(cfg.Database.Path)
+	db, err := database.Connect(h.cfg.Database.Path)
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
@@ -147,7 +159,7 @@ func runStartDaemon(cfg *config.Config, dm *daemon.Daemon) {
 	defer dm.RemovePID()
 
 	repo := database.NewRepository(db)
-	trackerSvc := tracker.NewService(cfg, repo, det)
+	trackerSvc := tracker.NewService(h.cfg, repo, det)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -162,7 +174,7 @@ func runStartDaemon(cfg *config.Config, dm *daemon.Daemon) {
 	}()
 
 	log.Println("Starting actionsum daemon...")
-	log.Printf("Configuration:\n%s", cfg.String())
+	log.Printf("Configuration:\n%s", h.cfg.String())
 
 	if err := trackerSvc.Start(ctx); err != nil && err != context.Canceled {
 		log.Fatalf("Tracker error: %v", err)
@@ -171,9 +183,8 @@ func runStartDaemon(cfg *config.Config, dm *daemon.Daemon) {
 	log.Println("Daemon stopped successfully")
 }
 
-func stopDaemon() {
-	cfg := config.New()
-	dm := daemon.New(cfg.Daemon.PIDFile)
+func (h *CommandHandler) stopDaemon() {
+	dm := daemon.New(h.cfg.Daemon.PIDFile)
 	running, pid, err := dm.IsRunning()
 	if err != nil {
 		log.Fatalf("Failed to check daemon status: %v", err)
@@ -189,60 +200,33 @@ func stopDaemon() {
 	fmt.Println("Daemon stopped successfully")
 }
 
-func showStatus() {
-	cfg := config.New()
-	dm := daemon.New(cfg.Daemon.PIDFile)
+func (h *CommandHandler) showStatus() {
+	dm := daemon.New(h.cfg.Daemon.PIDFile)
 	running, pid, err := dm.IsRunning()
 	if err != nil {
 		log.Fatalf("Failed to check daemon status: %v", err)
 	}
+
 	if !running {
-		fmt.Println("Status: Not running")
+		fmt.Println("Not running")
 	} else {
-		fmt.Printf("Status: Running (PID: %d)\n", pid)
-		fmt.Printf("Poll Interval: %v\n", cfg.Tracker.PollInterval)
-		fmt.Printf("Database: %s\n", cfg.Database.Path)
-	}
-
-	det, err := detector.New()
-	if err != nil {
-		fmt.Printf("\nCould not detect current window: %v\n", err)
-		return
-	}
-	defer det.Close()
-
-	windowInfo, err := det.GetFocusedWindow()
-	if err == nil && windowInfo != nil {
-		fmt.Printf("\nCurrent Window:\n")
-		fmt.Printf("  App: %s\n", windowInfo.AppName)
-		fmt.Printf("  Title: %s\n", windowInfo.WindowTitle)
-		fmt.Printf("  Display: %s\n", windowInfo.DisplayServer)
-	}
-
-	idleInfo, err := det.GetIdleInfo()
-	if err == nil && idleInfo != nil {
-		fmt.Printf("\nSystem State:\n")
-		fmt.Printf("  Idle: %v\n", idleInfo.IsIdle)
-		fmt.Printf("  Locked: %v\n", idleInfo.IsLocked)
-		if idleInfo.IdleTime > 0 {
-			fmt.Printf("  Idle Time: %ds\n", idleInfo.IdleTime)
-		}
+		fmt.Printf("Running (PID: %d)\n", pid)
+		fmt.Printf("http://localhost:%d\n", h.cfg.Web.Port)
 	}
 }
 
-func generateReport() {
+func (h *CommandHandler) generateReport() {
 	periodType := "day"
 	if len(os.Args) > 2 {
 		periodType = os.Args[2]
 	}
-	cfg := config.New()
-	db, err := database.Connect(cfg.Database.Path)
+	db, err := database.Connect(h.cfg.Database.Path)
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 	defer db.Close()
 	repo := database.NewRepository(db)
-	rep := reporter.New(cfg, repo)
+	rep := reporter.New(h.cfg, repo)
 
 	jsonOutput := false
 	if len(os.Args) > 3 && os.Args[3] == "--json" {
@@ -263,8 +247,7 @@ func generateReport() {
 	}
 }
 
-func clearDatabase() {
-	cfg := config.New()
+func (h *CommandHandler) clearDatabase() {
 	fmt.Print("This will delete all tracking data. Are you sure? (yes/no): ")
 	var response string
 	fmt.Scanln(&response)
@@ -272,7 +255,7 @@ func clearDatabase() {
 		fmt.Println("Operation cancelled")
 		return
 	}
-	db, err := database.Connect(cfg.Database.Path)
+	db, err := database.Connect(h.cfg.Database.Path)
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
@@ -284,12 +267,11 @@ func clearDatabase() {
 	fmt.Println("Database cleared successfully")
 }
 
-func serveDaemon(customPort int) {
-	cfg := config.New()
-	if err := cfg.Validate(); err != nil {
+func (h *CommandHandler) serveDaemon(customPort int) {
+	if err := h.cfg.Validate(); err != nil {
 		log.Fatalf("Invalid configuration: %v", err)
 	}
-	dm := daemon.New(cfg.Daemon.PIDFile)
+	dm := daemon.New(h.cfg.Daemon.PIDFile)
 	running, pid, err := dm.IsRunning()
 	if err != nil {
 		log.Fatalf("Failed to check daemon status: %v", err)
@@ -298,20 +280,20 @@ func serveDaemon(customPort int) {
 		log.Fatalf("Daemon is already running (PID: %d)", pid)
 	}
 	if os.Getenv("ACTIONSUM_DAEMON_CHILD") != "1" {
-		daemonize(true, cfg)
+		h.daemonize(true)
 		return
 	}
-	runServeDaemon(cfg, dm, customPort)
+	h.runServeDaemon(dm, customPort)
 }
 
-func runServeDaemon(cfg *config.Config, dm *daemon.Daemon, customPort int) {
+func (h *CommandHandler) runServeDaemon(dm *daemon.Daemon, customPort int) {
 	logPath := fmt.Sprintf("/tmp/actionsum-%d.log", os.Getuid())
 	logFile, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 	if err == nil {
 		log.SetOutput(logFile)
 		defer logFile.Close()
 	}
-	db, err := database.Connect(cfg.Database.Path)
+	db, err := database.Connect(h.cfg.Database.Path)
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
@@ -330,8 +312,8 @@ func runServeDaemon(cfg *config.Config, dm *daemon.Daemon, customPort int) {
 	}
 	defer dm.RemovePID()
 	repo := database.NewRepository(db)
-	trackerSvc := tracker.NewService(cfg, repo, det)
-	webServer := web.NewServer(cfg, repo, customPort)
+	trackerSvc := tracker.NewService(h.cfg, repo, det)
+	webServer := web.NewServer(h.cfg, repo, customPort)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	sigChan := make(chan os.Signal, 1)
@@ -349,7 +331,7 @@ func runServeDaemon(cfg *config.Config, dm *daemon.Daemon, customPort int) {
 	}()
 	log.Println("Starting actionsum daemon with web API...")
 	log.Printf("Web API available at: http://%s", webServer.GetAddress())
-	log.Printf("Configuration:\n%s", cfg.String())
+	log.Printf("Configuration:\n%s", h.cfg.String())
 	<-sigChan
 	log.Println("Received shutdown signal")
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -362,7 +344,7 @@ func runServeDaemon(cfg *config.Config, dm *daemon.Daemon, customPort int) {
 	log.Println("Daemon stopped successfully")
 }
 
-func daemonize(withWeb bool, cfg *config.Config) {
+func (h *CommandHandler) daemonize(withWeb bool) {
 	env := os.Environ()
 	env = append(env, "ACTIONSUM_DAEMON_CHILD=1")
 
@@ -387,7 +369,7 @@ func daemonize(withWeb bool, cfg *config.Config) {
 	logPath := fmt.Sprintf("/tmp/actionsum-%d.log", os.Getuid())
 	if withWeb {
 		fmt.Printf("Daemon started successfully (PID: %d)\n", process.Pid)
-		fmt.Printf("Web API available at: http://localhost:%d\n", cfg.Web.Port)
+		fmt.Printf("Web API available at: http://localhost:%d\n", h.cfg.Web.Port)
 		fmt.Printf("Logs: %s\n", logPath)
 	} else {
 		fmt.Printf("Daemon started successfully (PID: %d)\n", process.Pid)
