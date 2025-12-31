@@ -15,14 +15,12 @@ import (
 	"github.com/actionsum/actionsum/pkg/utils"
 )
 
-// Handler manages HTTP requests
 type Handler struct {
 	config   *config.Config
 	repo     *database.Repository
 	reporter *reporter.Reporter
 }
 
-// NewHandler creates a new web handler
 func NewHandler(cfg *config.Config, repo *database.Repository) *Handler {
 	return &Handler{
 		config:   cfg,
@@ -31,30 +29,24 @@ func NewHandler(cfg *config.Config, repo *database.Repository) *Handler {
 	}
 }
 
-// SetupRoutes configures all HTTP routes
 func (h *Handler) SetupRoutes(mux *http.ServeMux) {
-	// API routes
 	mux.HandleFunc("/api/events", h.handleEvents)
 	mux.HandleFunc("/api/events/latest", h.handleLatestEvent)
 	mux.HandleFunc("/api/report", h.handleReport)
 	mux.HandleFunc("/api/summary", h.handleSummary)
 	mux.HandleFunc("/api/status", h.handleStatus)
 
-	// Health check
 	mux.HandleFunc("/health", h.handleHealth)
 
-	// Root
 	mux.HandleFunc("/", h.handleIndex)
 }
 
-// handleEvents returns focus events with optional filtering
 func (h *Handler) handleEvents(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	// Parse query parameters
 	query := r.URL.Query()
 	limitStr := query.Get("limit")
 	periodType := query.Get("period") // day, week, month
@@ -62,7 +54,6 @@ func (h *Handler) handleEvents(w http.ResponseWriter, r *http.Request) {
 	var events []*models.FocusEvent
 
 	if periodType != "" {
-		// Get events for a specific period
 		period, err := h.getPeriod(periodType)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -74,11 +65,9 @@ func (h *Handler) handleEvents(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	} else {
-		// Get recent events (last 24 hours by default)
 		start := time.Now().Add(-24 * time.Hour)
 		allEvents, err := h.repo.GetEventsSince(start)
 		if err == nil {
-			// Apply limit in runtime
 			limit := 100 // default
 			if limitStr != "" {
 				if l, err := strconv.Atoi(limitStr); err == nil && l > 0 {
@@ -97,7 +86,6 @@ func (h *Handler) handleEvents(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, events)
 }
 
-// handleLatestEvent returns the most recent focus event
 func (h *Handler) handleLatestEvent(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -118,7 +106,6 @@ func (h *Handler) handleLatestEvent(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, event)
 }
 
-// handleReport generates a report for the specified period
 func (h *Handler) handleReport(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -139,7 +126,6 @@ func (h *Handler) handleReport(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, report)
 }
 
-// handleSummary returns aggregated app usage summary
 func (h *Handler) handleSummary(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -157,14 +143,12 @@ func (h *Handler) handleSummary(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get raw summaries from database (SQL does the SUM)
 	summaries, err := h.repo.GetAppSummarySince(period.Start)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Failed to get summary: %v", err), http.StatusInternalServerError)
 		return
 	}
 
-	// Runtime calculates derived fields and totals
 	var totalSeconds int64
 	for i := range summaries {
 		summaries[i].TotalMinutes = float64(summaries[i].TotalSeconds) / 60.0
@@ -172,20 +156,17 @@ func (h *Handler) handleSummary(w http.ResponseWriter, r *http.Request) {
 		totalSeconds += summaries[i].TotalSeconds
 	}
 
-	// Calculate percentages
 	if totalSeconds > 0 {
 		for i := range summaries {
 			summaries[i].Percentage = (float64(summaries[i].TotalSeconds) / float64(totalSeconds)) * 100.0
 		}
 	}
 
-	// Check if request is from HTMX
 	if r.Header.Get("HX-Request") == "true" {
 		h.respondSummaryHTML(w, summaries, totalSeconds)
 		return
 	}
 
-	// Default JSON response
 	response := map[string]interface{}{
 		"period":        period,
 		"apps":          summaries,
@@ -197,7 +178,6 @@ func (h *Handler) handleSummary(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, response)
 }
 
-// respondSummaryHTML renders summary data as HTML
 func (h *Handler) respondSummaryHTML(w http.ResponseWriter, summaries []models.AppSummary, totalSeconds int64) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
@@ -208,10 +188,8 @@ func (h *Handler) respondSummaryHTML(w http.ResponseWriter, summaries []models.A
 
 	html := `<div class="listing">`
 	for _, app := range summaries {
-		// Show the highest round unit (h, m, or s)
 		timeStr := utils.FormatRoundedUnit(app.TotalSeconds)
 
-		// Format percentage with padding for XX.X% format
 		percentStr := fmt.Sprintf("%.1f%%", app.Percentage)
 		if app.Percentage < 10 {
 			percentStr = "&nbsp;&nbsp;" + percentStr
@@ -237,7 +215,6 @@ func (h *Handler) respondSummaryHTML(w http.ResponseWriter, summaries []models.A
 	w.Write([]byte(html))
 }
 
-// handleStatus returns current daemon status
 func (h *Handler) handleStatus(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -265,7 +242,6 @@ func (h *Handler) handleStatus(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, status)
 }
 
-// handleHealth returns health check status
 func (h *Handler) handleHealth(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, map[string]string{
 		"status": "healthy",
@@ -273,14 +249,12 @@ func (h *Handler) handleHealth(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// handleIndex serves the main dashboard page
 func (h *Handler) handleIndex(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
 		http.NotFound(w, r)
 		return
 	}
 
-	// HTML template for the dashboard
 	html := `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -545,7 +519,6 @@ func (h *Handler) handleIndex(w http.ResponseWriter, r *http.Request) {
         </div>
     </div>
     <script>
-        // Initialize theme from localStorage or system preference
         function initTheme() {
             const savedTheme = localStorage.getItem('theme');
             const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -565,7 +538,6 @@ func (h *Handler) handleIndex(w http.ResponseWriter, r *http.Request) {
             setTheme(newTheme);
         }
         
-        // Initialize bar chart state
         function initBars() {
             const savedBars = localStorage.getItem('bars');
             const showBars = savedBars === 'true';
@@ -588,7 +560,6 @@ func (h *Handler) handleIndex(w http.ResponseWriter, r *http.Request) {
             setBars(!current);
         }
 
-        // Initialize on page load
         initTheme();
         initBars();
     </script>
@@ -599,7 +570,6 @@ func (h *Handler) handleIndex(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(html))
 }
 
-// getPeriod calculates the time range for a period type
 func (h *Handler) getPeriod(periodType string) (*models.ReportPeriod, error) {
 	now := time.Now()
 	var start, end time.Time
@@ -629,7 +599,6 @@ func (h *Handler) getPeriod(periodType string) (*models.ReportPeriod, error) {
 	}, nil
 }
 
-// respondJSON sends a JSON response
 func respondJSON(w http.ResponseWriter, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*")

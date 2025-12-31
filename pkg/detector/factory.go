@@ -7,13 +7,10 @@ import (
 	"github.com/actionsum/actionsum/pkg/window"
 )
 
-// New creates a new hybrid detector that works universally
-// This is the V2 detector that combines window detection with process monitoring
 func New() (window.Detector, error) {
 	return hybrid.NewDetector()
 }
 
-// DetectDisplayServer returns the detected display server type
 func DetectDisplayServer() string {
 	sessionType := os.Getenv("XDG_SESSION_TYPE")
 	waylandDisplay := os.Getenv("WAYLAND_DISPLAY")

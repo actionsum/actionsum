@@ -7,23 +7,19 @@ import (
 	"syscall"
 )
 
-// Daemon manages daemon process operations
 type Daemon struct {
 	pidFile string
 }
 
-// New creates a new daemon manager
 func New(pidFile string) *Daemon {
 	return &Daemon{pidFile: pidFile}
 }
 
-// WritePID writes the current process PID to the PID file
 func (d *Daemon) WritePID() error {
 	pid := os.Getpid()
 	return os.WriteFile(d.pidFile, fmt.Appendf([]byte{}, "%d", pid), 0644)
 }
 
-// ReadPID reads the PID from the PID file
 func (d *Daemon) ReadPID() (int, error) {
 	data, err := os.ReadFile(d.pidFile)
 	if err != nil {
@@ -41,7 +37,6 @@ func (d *Daemon) ReadPID() (int, error) {
 	return pid, nil
 }
 
-// RemovePID removes the PID file
 func (d *Daemon) RemovePID() error {
 	if err := os.Remove(d.pidFile); err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("failed to remove PID file: %w", err)
@@ -49,7 +44,6 @@ func (d *Daemon) RemovePID() error {
 	return nil
 }
 
-// IsRunning checks if a daemon process is running
 func (d *Daemon) IsRunning() (bool, int, error) {
 	pid, err := d.ReadPID()
 	if err != nil {
@@ -60,7 +54,6 @@ func (d *Daemon) IsRunning() (bool, int, error) {
 		return false, 0, nil
 	}
 
-	// Check if process exists by sending signal 0
 	process, err := os.FindProcess(pid)
 	if err != nil {
 		return false, 0, nil
@@ -68,7 +61,6 @@ func (d *Daemon) IsRunning() (bool, int, error) {
 
 	err = process.Signal(syscall.Signal(0))
 	if err != nil {
-		// Process doesn't exist, clean up stale PID file
 		d.RemovePID()
 		return false, 0, nil
 	}
@@ -76,7 +68,6 @@ func (d *Daemon) IsRunning() (bool, int, error) {
 	return true, pid, nil
 }
 
-// Stop stops the daemon process
 func (d *Daemon) Stop() error {
 	running, pid, err := d.IsRunning()
 	if err != nil {
@@ -92,17 +83,14 @@ func (d *Daemon) Stop() error {
 		return fmt.Errorf("failed to find process: %w", err)
 	}
 
-	// Attempt to send SIGTERM
 	if err := process.Signal(syscall.SIGTERM); err != nil {
 		if err.Error() == "os: process already finished" {
-			// Process already terminated, clean up PID file
 			_ = d.RemovePID()
 			return fmt.Errorf("daemon process already terminated")
 		}
 		return fmt.Errorf("failed to send SIGTERM: %w", err)
 	}
 
-	// Remove PID file
 	if err := d.RemovePID(); err != nil {
 		return fmt.Errorf("failed to remove PID file: %w", err)
 	}

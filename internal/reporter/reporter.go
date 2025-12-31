@@ -11,13 +11,11 @@ import (
 	"github.com/actionsum/actionsum/pkg/utils"
 )
 
-// Reporter handles report generation
 type Reporter struct {
 	config *config.Config
 	repo   *database.Repository
 }
 
-// New creates a new reporter
 func New(cfg *config.Config, repo *database.Repository) *Reporter {
 	return &Reporter{
 		config: cfg,
@@ -25,20 +23,17 @@ func New(cfg *config.Config, repo *database.Repository) *Reporter {
 	}
 }
 
-// GenerateReport generates a report for the specified period
 func (r *Reporter) GenerateReport(periodType string) (*models.Report, error) {
 	period, err := r.getPeriod(periodType)
 	if err != nil {
 		return nil, err
 	}
 
-	// Get raw summaries from database (SQL does the SUM)
 	summaries, err := r.repo.GetAppSummarySince(period.Start)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get app summary: %w", err)
 	}
 
-	// Runtime calculates derived fields and percentages
 	var totalSeconds int64
 	for i := range summaries {
 		summaries[i].TotalMinutes = float64(summaries[i].TotalSeconds) / 60.0
@@ -46,7 +41,6 @@ func (r *Reporter) GenerateReport(periodType string) (*models.Report, error) {
 		totalSeconds += summaries[i].TotalSeconds
 	}
 
-	// Calculate percentages
 	if totalSeconds > 0 {
 		for i := range summaries {
 			summaries[i].Percentage = (float64(summaries[i].TotalSeconds) / float64(totalSeconds)) * 100.0
@@ -65,7 +59,6 @@ func (r *Reporter) GenerateReport(periodType string) (*models.Report, error) {
 	return report, nil
 }
 
-// getPeriod calculates the time range for the report
 func (r *Reporter) getPeriod(periodType string) (*models.ReportPeriod, error) {
 	now := time.Now()
 	var start, end time.Time
@@ -76,7 +69,6 @@ func (r *Reporter) getPeriod(periodType string) (*models.ReportPeriod, error) {
 		end = start.Add(24 * time.Hour)
 
 	case "week":
-		// Start of week (Monday)
 		weekday := int(now.Weekday())
 		if weekday == 0 {
 			weekday = 7 // Sunday = 7
@@ -99,7 +91,6 @@ func (r *Reporter) getPeriod(periodType string) (*models.ReportPeriod, error) {
 	}, nil
 }
 
-// FormatReportText formats the report as human-readable text
 func (r *Reporter) FormatReportText(report *models.Report) string {
 	output := fmt.Sprintf("Activity Report - %s\n", report.Period.Type)
 	output += fmt.Sprintf("Period: %s to %s\n",
@@ -116,7 +107,6 @@ func (r *Reporter) FormatReportText(report *models.Report) string {
 	output += fmt.Sprintf("%s\n", "--------------------------------------------------------------------------------")
 
 	for _, app := range report.Apps {
-		// Show the highest round unit (h, m, or s)
 		timeStr := utils.FormatRoundedUnit(app.TotalSeconds)
 
 		output += fmt.Sprintf("%-30s %10.2f %10s %9.1f%%\n",
@@ -129,7 +119,6 @@ func (r *Reporter) FormatReportText(report *models.Report) string {
 	return output
 }
 
-// FormatReportJSON formats the report as JSON
 func (r *Reporter) FormatReportJSON(report *models.Report) (string, error) {
 	data, err := json.MarshalIndent(report, "", "  ")
 	if err != nil {
@@ -138,7 +127,6 @@ func (r *Reporter) FormatReportJSON(report *models.Report) (string, error) {
 	return string(data), nil
 }
 
-// truncate truncates a string to the specified length
 func truncate(s string, maxLen int) string {
 	if len(s) <= maxLen {
 		return s

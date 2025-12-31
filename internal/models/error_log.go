@@ -6,7 +6,6 @@ import (
 	"gorm.io/gorm"
 )
 
-// ErrorLog represents tracking errors that occur during operation
 type ErrorLog struct {
 	ID        uint           `gorm:"primaryKey" json:"id"`
 	Timestamp time.Time      `gorm:"not null;index" json:"timestamp"`

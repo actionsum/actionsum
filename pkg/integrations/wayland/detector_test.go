@@ -12,7 +12,6 @@ func TestNewDetector(t *testing.T) {
 		t.Fatal("NewDetector() returned nil")
 	}
 
-	// Verify compositor was detected
 	t.Logf("Detected compositor: %s", detector.compositor)
 }
 
@@ -53,7 +52,6 @@ func TestIsAvailable(t *testing.T) {
 	t.Logf("Wayland detector available: %v", available)
 	t.Logf("Compositor: %s", detector.compositor)
 
-	// Log availability reasons
 	switch detector.compositor {
 	case "sway", "hyprland":
 		t.Logf("Sway/Hyprland requires swaymsg: %v", detector.hasSwaymsg)
@@ -96,7 +94,6 @@ func TestGetFocusedWindow(t *testing.T) {
 	windowInfo, err := detector.GetFocusedWindow()
 	if err != nil {
 		t.Logf("GetFocusedWindow() error (may be expected): %v", err)
-		// Don't fail - detection might fail for various reasons
 		return
 	}
 
@@ -104,13 +101,11 @@ func TestGetFocusedWindow(t *testing.T) {
 		t.Fatal("GetFocusedWindow() returned nil windowInfo without error")
 	}
 
-	// Log the results
 	t.Logf("App Name: %s", windowInfo.AppName)
 	t.Logf("Window Title: %s", windowInfo.WindowTitle)
 	t.Logf("Process Name: %s", windowInfo.ProcessName)
 	t.Logf("Display Server: %s", windowInfo.DisplayServer)
 
-	// Verify fields
 	if windowInfo.DisplayServer != "wayland" {
 		t.Errorf("DisplayServer = %s, want wayland", windowInfo.DisplayServer)
 	}
@@ -133,12 +128,10 @@ func TestGetIdleInfo(t *testing.T) {
 		t.Fatal("GetIdleInfo() returned nil idleInfo without error")
 	}
 
-	// Log the results
 	t.Logf("Is Idle: %v", idleInfo.IsIdle)
 	t.Logf("Is Locked: %v", idleInfo.IsLocked)
 	t.Logf("Idle Time: %d seconds", idleInfo.IdleTime)
 
-	// Verify idle time is non-negative
 	if idleInfo.IdleTime < 0 {
 		t.Errorf("IdleTime is negative: %d", idleInfo.IdleTime)
 	}
@@ -224,13 +217,11 @@ func TestParseWMClass(t *testing.T) {
 }
 
 func TestGetProcessName(t *testing.T) {
-	// Test with current process PID
 	pid := "1" // init/systemd should always exist
 
 	name := getProcessName(pid)
 	t.Logf("Process name for PID %s: %s", pid, name)
 
-	// Should return something for PID 1
 	if name == "" {
 		t.Log("Warning: Could not get process name for PID 1")
 	}
@@ -242,7 +233,6 @@ func TestIsScreenLocked(t *testing.T) {
 	locked := detector.isScreenLocked()
 	t.Logf("Screen is locked: %v", locked)
 
-	// Just verify it doesn't panic and returns a boolean
 	if locked != true && locked != false {
 		t.Error("isScreenLocked() returned non-boolean value")
 	}
@@ -254,7 +244,6 @@ func TestGetIdleTime(t *testing.T) {
 	idleTime := detector.getIdleTime()
 	t.Logf("Idle time: %d seconds", idleTime)
 
-	// Verify idle time is non-negative
 	if idleTime < 0 {
 		t.Errorf("getIdleTime() returned negative value: %d", idleTime)
 	}
@@ -269,40 +258,5 @@ func TestClose(t *testing.T) {
 }
 
 func TestDetectorInterface(t *testing.T) {
-	// Verify that Detector implements window.Detector interface
 	var _ window.Detector = (*Detector)(nil)
-}
-
-// Benchmark tests
-func BenchmarkGetFocusedWindow(b *testing.B) {
-	detector := NewDetector()
-
-	if !detector.IsAvailable() {
-		b.Skip("Wayland detector not available")
-	}
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_, _ = detector.GetFocusedWindow()
-	}
-}
-
-func BenchmarkGetIdleInfo(b *testing.B) {
-	detector := NewDetector()
-
-	if !detector.IsAvailable() {
-		b.Skip("Wayland detector not available")
-	}
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_, _ = detector.GetIdleInfo()
-	}
-}
-
-func BenchmarkDetectCompositor(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-		detector := NewDetector()
-		_ = detector.compositor
-	}
 }

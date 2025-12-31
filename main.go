@@ -21,12 +21,10 @@ import (
 	"github.com/actionsum/actionsum/version"
 )
 
-// CommandHandler handles all CLI commands with shared configuration
 type CommandHandler struct {
 	cfg *config.Config
 }
 
-// NewCommandHandler creates a new command handler with configuration
 func NewCommandHandler() *CommandHandler {
 	return &CommandHandler{
 		cfg: config.New(),
@@ -34,7 +32,6 @@ func NewCommandHandler() *CommandHandler {
 }
 
 func main() {
-	// Parse flags
 	customPort := flag.Int("p", 0, "Custom port to run the server on")
 	flag.Parse()
 
@@ -365,7 +362,6 @@ func (h *CommandHandler) daemonize(withWeb bool) {
 	env := os.Environ()
 	env = append(env, "ACTIONSUM_DAEMON_CHILD=1")
 
-	// Get the absolute path to the current executable
 	executable, err := os.Executable()
 	if err != nil {
 		log.Fatalf("Failed to get executable path: %v", err)

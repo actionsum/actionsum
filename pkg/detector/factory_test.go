@@ -9,7 +9,6 @@ func TestNew(t *testing.T) {
 	detector, err := New()
 	if err != nil {
 		t.Logf("New() returned error (may be expected): %v", err)
-		// Don't fail - might not have any supported display server
 		return
 	}
 
@@ -24,7 +23,6 @@ func TestNew(t *testing.T) {
 		t.Errorf("GetDisplayServer() = %s, want x11 or wayland", displayServer)
 	}
 
-	// Test that we can get focused window
 	windowInfo, err := detector.GetFocusedWindow()
 	if err != nil {
 		t.Logf("GetFocusedWindow() error: %v", err)
@@ -32,7 +30,6 @@ func TestNew(t *testing.T) {
 		t.Logf("Current window: %s - %s", windowInfo.AppName, windowInfo.WindowTitle)
 	}
 
-	// Test idle info
 	idleInfo, err := detector.GetIdleInfo()
 	if err != nil {
 		t.Logf("GetIdleInfo() error: %v", err)
@@ -40,7 +37,6 @@ func TestNew(t *testing.T) {
 		t.Logf("Idle state: idle=%v, locked=%v", idleInfo.IsIdle, idleInfo.IsLocked)
 	}
 
-	// Clean up
 	if err := detector.Close(); err != nil {
 		t.Errorf("Close() error: %v", err)
 	}
@@ -91,13 +87,11 @@ func TestDetectDisplayServer(t *testing.T) {
 		},
 	}
 
-	// Save original env vars
 	origSessionType := os.Getenv("XDG_SESSION_TYPE")
 	origWaylandDisplay := os.Getenv("WAYLAND_DISPLAY")
 	origX11Display := os.Getenv("DISPLAY")
 
 	defer func() {
-		// Restore original env vars
 		os.Setenv("XDG_SESSION_TYPE", origSessionType)
 		os.Setenv("WAYLAND_DISPLAY", origWaylandDisplay)
 		os.Setenv("DISPLAY", origX11Display)
@@ -105,7 +99,6 @@ func TestDetectDisplayServer(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Set test env vars
 			os.Setenv("XDG_SESSION_TYPE", tt.sessionType)
 			os.Setenv("WAYLAND_DISPLAY", tt.waylandDisplay)
 			os.Setenv("DISPLAY", tt.x11Display)
@@ -119,27 +112,22 @@ func TestDetectDisplayServer(t *testing.T) {
 }
 
 func TestNewWithUnsupportedSystem(t *testing.T) {
-	// Save original env vars
 	origSessionType := os.Getenv("XDG_SESSION_TYPE")
 	origWaylandDisplay := os.Getenv("WAYLAND_DISPLAY")
 	origX11Display := os.Getenv("DISPLAY")
 
 	defer func() {
-		// Restore original env vars
 		os.Setenv("XDG_SESSION_TYPE", origSessionType)
 		os.Setenv("WAYLAND_DISPLAY", origWaylandDisplay)
 		os.Setenv("DISPLAY", origX11Display)
 	}()
 
-	// Clear all display server env vars
 	os.Unsetenv("XDG_SESSION_TYPE")
 	os.Unsetenv("WAYLAND_DISPLAY")
 	os.Unsetenv("DISPLAY")
 
 	detector, err := New()
 
-	// On a system with no display server, we expect an error
-	// But if tools like xdotool are still available, it might succeed
 	if err != nil {
 		t.Logf("New() correctly returned error when no display server detected: %v", err)
 	} else if detector != nil {
@@ -149,7 +137,6 @@ func TestNewWithUnsupportedSystem(t *testing.T) {
 }
 
 func TestMultipleDetectorInstances(t *testing.T) {
-	// Test that we can create multiple detector instances
 	detector1, err := New()
 	if err != nil {
 		t.Skip("Display server not available")
@@ -162,7 +149,6 @@ func TestMultipleDetectorInstances(t *testing.T) {
 	}
 	defer detector2.Close()
 
-	// Both should work independently
 	ds1 := detector1.GetDisplayServer()
 	ds2 := detector2.GetDisplayServer()
 
@@ -171,21 +157,4 @@ func TestMultipleDetectorInstances(t *testing.T) {
 	}
 
 	t.Logf("Successfully created multiple detector instances")
-}
-
-// Benchmark tests
-func BenchmarkNew(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-		detector, err := New()
-		if err != nil {
-			b.Skip("Display server not available")
-		}
-		detector.Close()
-	}
-}
-
-func BenchmarkDetectDisplayServer(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-		_ = DetectDisplayServer()
-	}
 }

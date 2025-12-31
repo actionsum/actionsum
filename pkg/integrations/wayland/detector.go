@@ -9,14 +9,12 @@ import (
 	"github.com/actionsum/actionsum/pkg/window"
 )
 
-// Detector implements window.Detector for Wayland
 type Detector struct {
 	compositor string
 	hasSwaymsg bool
 	hasGdbus   bool
 }
 
-// NewDetector creates a new Wayland detector
 func NewDetector() *Detector {
 	d := &Detector{}
 	d.hasSwaymsg = d.commandExists("swaymsg")
@@ -25,13 +23,11 @@ func NewDetector() *Detector {
 	return d
 }
 
-// commandExists checks if a command is available in PATH
 func (d *Detector) commandExists(cmd string) bool {
 	_, err := exec.LookPath(cmd)
 	return err == nil
 }
 
-// detectCompositor attempts to detect the Wayland compositor
 func (d *Detector) detectCompositor() {
 	compositors := map[string]string{
 		"sway":         "sway",
@@ -53,7 +49,6 @@ func (d *Detector) detectCompositor() {
 	d.compositor = "unknown"
 }
 
-// IsAvailable checks if Wayland detection is available
 func (d *Detector) IsAvailable() bool {
 	switch d.compositor {
 	case "sway", "hyprland":
@@ -67,12 +62,10 @@ func (d *Detector) IsAvailable() bool {
 	}
 }
 
-// GetDisplayServer returns "wayland"
 func (d *Detector) GetDisplayServer() string {
 	return "wayland"
 }
 
-// GetFocusedWindow returns information about the currently focused window
 func (d *Detector) GetFocusedWindow() (*window.WindowInfo, error) {
 	switch d.compositor {
 	case "sway":
@@ -88,7 +81,6 @@ func (d *Detector) GetFocusedWindow() (*window.WindowInfo, error) {
 	}
 }
 
-// getFocusedWindowSway gets focused window info from Sway
 func (d *Detector) getFocusedWindowSway() (*window.WindowInfo, error) {
 	cmd := exec.Command("swaymsg", "-t", "get_tree")
 	output, err := cmd.Output()
@@ -105,7 +97,6 @@ func (d *Detector) getFocusedWindowSway() (*window.WindowInfo, error) {
 	return info, nil
 }
 
-// parseSwayTree parses sway tree JSON output (simplified parsing)
 func parseSwayTree(jsonOutput string) (*window.WindowInfo, error) {
 	lines := strings.Split(jsonOutput, "\n")
 
@@ -168,7 +159,6 @@ func parseSwayTree(jsonOutput string) (*window.WindowInfo, error) {
 	}, nil
 }
 
-// getFocusedWindowHyprland gets focused window info from Hyprland
 func (d *Detector) getFocusedWindowHyprland() (*window.WindowInfo, error) {
 	cmd := exec.Command("hyprctl", "activewindow", "-j")
 	output, err := cmd.Output()
@@ -181,7 +171,6 @@ func (d *Detector) getFocusedWindowHyprland() (*window.WindowInfo, error) {
 	return info, nil
 }
 
-// parseHyprlandWindow parses Hyprland active window JSON (simplified)
 func parseHyprlandWindow(jsonOutput string) *window.WindowInfo {
 	lines := strings.Split(jsonOutput, "\n")
 
@@ -233,9 +222,7 @@ func parseHyprlandWindow(jsonOutput string) *window.WindowInfo {
 	}
 }
 
-// getFocusedWindowGnome gets focused window info from GNOME Shell via D-Bus
 func (d *Detector) getFocusedWindowGnome() (*window.WindowInfo, error) {
-	// Try gdbus method first (works without X11 authorization)
 	script := `
 	try {
 		let win = global.get_window_actors().find(w => w.meta_window && w.meta_window.has_focus());
@@ -259,11 +246,9 @@ func (d *Detector) getFocusedWindowGnome() (*window.WindowInfo, error) {
 
 	output, err := cmd.Output()
 
-	// Parse output: (true, 'AppName|||WindowTitle') or (false, '')
 	if err == nil {
 		result := strings.TrimSpace(string(output))
 
-		// Check if Shell.Eval succeeded
 		if strings.HasPrefix(result, "(true,") {
 			result = strings.TrimPrefix(result, "(true, '")
 			result = strings.TrimSuffix(result, "')")
@@ -280,7 +265,6 @@ func (d *Detector) getFocusedWindowGnome() (*window.WindowInfo, error) {
 				windowTitle = parts[1]
 			}
 
-			// Only return if we got valid info
 			if appName != "Unknown" {
 				return &window.WindowInfo{
 					AppName:       appName,
@@ -292,36 +276,29 @@ func (d *Detector) getFocusedWindowGnome() (*window.WindowInfo, error) {
 		}
 	}
 
-	// Fallback to XWayland using xprop (only needs xprop, not xdotool)
 	if d.commandExists("xprop") {
 		info, xErr := d.getFocusedWindowXWayland()
 		if xErr == nil {
 			return info, nil
 		}
-		// Return detailed error from xprop
 		return nil, fmt.Errorf("GNOME window detection failed: gdbus Shell.Eval blocked, xprop failed: %v", xErr)
 	}
 
-	// Last resort: return error
 	return nil, fmt.Errorf("GNOME window detection failed: gdbus Shell.Eval blocked and xprop unavailable")
 }
 
-// getFocusedWindowXWayland uses XWayland bridge (fallback for Wayland)
 func (d *Detector) getFocusedWindowXWayland() (*window.WindowInfo, error) {
-	// Check if DISPLAY is set - required for xprop
 	display := os.Getenv("DISPLAY")
 	if display == "" {
 		return nil, fmt.Errorf("DISPLAY environment variable not set (XWayland not available)")
 	}
 
-	// Get active window ID from root window property
 	rootCmd := exec.Command("xprop", "-root", "_NET_ACTIVE_WINDOW")
 	rootOutput, err := rootCmd.CombinedOutput()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get active window from root: %w (output: %s)", err, string(rootOutput))
 	}
 
-	// Parse: _NET_ACTIVE_WINDOW(WINDOW): window id # 0x80032b
 	windowID := ""
 	output := string(rootOutput)
 	if strings.Contains(output, "# 0x") {
@@ -335,7 +312,6 @@ func (d *Detector) getFocusedWindowXWayland() (*window.WindowInfo, error) {
 		return nil, fmt.Errorf("no active window found (focused window may be native Wayland)")
 	}
 
-	// Get window title
 	nameCmd := exec.Command("xprop", "-id", windowID, "WM_NAME")
 	nameOutput, _ := nameCmd.Output()
 	windowTitle := parseXPropString(string(nameOutput))
@@ -343,7 +319,6 @@ func (d *Detector) getFocusedWindowXWayland() (*window.WindowInfo, error) {
 		windowTitle = "Unknown"
 	}
 
-	// Get window class
 	classCmd := exec.Command("xprop", "-id", windowID, "WM_CLASS")
 	classOutput, _ := classCmd.Output()
 	appName := parseWMClass(string(classOutput))
@@ -359,7 +334,6 @@ func (d *Detector) getFocusedWindowXWayland() (*window.WindowInfo, error) {
 	}, nil
 }
 
-// parseXPropString parses xprop string output like: WM_NAME(STRING) = "title"
 func parseXPropString(output string) string {
 	if strings.Contains(output, "=") {
 		parts := strings.SplitN(output, "=", 2)
@@ -372,7 +346,6 @@ func parseXPropString(output string) string {
 	return ""
 }
 
-// parseWMClass extracts class from WM_CLASS output
 func parseWMClass(output string) string {
 	if strings.Contains(output, "=") {
 		parts := strings.Split(output, "=")
@@ -388,7 +361,6 @@ func parseWMClass(output string) string {
 	return ""
 }
 
-// getFocusedWindowKDE gets focused window info from KDE Plasma
 func (d *Detector) getFocusedWindowKDE() (*window.WindowInfo, error) {
 	script := `
 	var clients = workspace.clientList();
@@ -424,7 +396,6 @@ func (d *Detector) getFocusedWindowKDE() (*window.WindowInfo, error) {
 	}, nil
 }
 
-// getProcessName retrieves process name from PID
 func getProcessName(pid string) string {
 	cmd := exec.Command("ps", "-p", pid, "-o", "comm=")
 	output, err := cmd.Output()
@@ -434,7 +405,6 @@ func getProcessName(pid string) string {
 	return strings.TrimSpace(string(output))
 }
 
-// GetIdleInfo returns system idle/lock information for Wayland
 func (d *Detector) GetIdleInfo() (*window.IdleInfo, error) {
 	idleTime := d.getIdleTime()
 	isLocked := d.isScreenLocked()
@@ -449,7 +419,6 @@ func (d *Detector) GetIdleInfo() (*window.IdleInfo, error) {
 	}, nil
 }
 
-// getIdleTime attempts to get idle time (limited support in Wayland)
 func (d *Detector) getIdleTime() int64 {
 	switch d.compositor {
 	case "sway", "hyprland":
@@ -462,7 +431,6 @@ func (d *Detector) getIdleTime() int64 {
 	return 0
 }
 
-// isScreenLocked checks if screen is locked
 func (d *Detector) isScreenLocked() bool {
 	lockers := []string{
 		"swaylock",
@@ -479,9 +447,9 @@ func (d *Detector) isScreenLocked() bool {
 		}
 	}
 
-	cmd := exec.Command("loginctl", "show-session", "-p", "LockedHint")
+	cmd := exec.Command("gdbus", "call", "--session", "--dest", "org.gnome.ScreenSaver", "--object-path", "/org/gnome/ScreenSaver", "--method", "org.gnome.ScreenSaver.GetActive")
 	if output, err := cmd.Output(); err == nil {
-		if strings.Contains(string(output), "LockedHint=yes") {
+		if strings.Contains(string(output), "true") {
 			return true
 		}
 	}
@@ -489,7 +457,6 @@ func (d *Detector) isScreenLocked() bool {
 	return false
 }
 
-// Close cleans up resources
 func (d *Detector) Close() error {
 	return nil
 }

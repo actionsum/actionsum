@@ -11,15 +11,12 @@ import (
 	"github.com/actionsum/actionsum/internal/database"
 )
 
-// Server wraps the HTTP server
 type Server struct {
 	config  *config.Config
 	handler *Handler
 	server  *http.Server
 }
 
-// NewServer creates a new web server
-// Updated to allow custom port via -p flag
 func NewServer(cfg *config.Config, repo *database.Repository, customPort int) *Server {
 	handler := NewHandler(cfg, repo)
 	mux := http.NewServeMux()
@@ -46,19 +43,16 @@ func NewServer(cfg *config.Config, repo *database.Repository, customPort int) *S
 	}
 }
 
-// Start starts the web server
 func (s *Server) Start() error {
 	log.Printf("Starting web server on http://%s", s.server.Addr)
 	return s.server.ListenAndServe()
 }
 
-// Shutdown gracefully shuts down the server
 func (s *Server) Shutdown(ctx context.Context) error {
 	log.Println("Shutting down web server...")
 	return s.server.Shutdown(ctx)
 }
 
-// GetAddress returns the server address
 func (s *Server) GetAddress() string {
 	return s.server.Addr
 }

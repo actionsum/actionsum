@@ -6,15 +6,11 @@ import (
 	"time"
 )
 
-// LoadFromEnv loads configuration from environment variables
-// Environment variables override default values
 func LoadFromEnv(cfg *Config) {
-	// Database configuration
 	if dbPath := os.Getenv("ACTIONSUM_DB_PATH"); dbPath != "" {
 		cfg.Database.Path = dbPath
 	}
 
-	// Tracker configuration
 	if pollInterval := os.Getenv("ACTIONSUM_POLL_INTERVAL"); pollInterval != "" {
 		if seconds, err := strconv.Atoi(pollInterval); err == nil && seconds > 0 {
 			interval := time.Duration(seconds) * time.Second
@@ -30,12 +26,10 @@ func LoadFromEnv(cfg *Config) {
 		}
 	}
 
-	// Daemon configuration
 	if pidFile := os.Getenv("ACTIONSUM_PID_FILE"); pidFile != "" {
 		cfg.Daemon.PIDFile = pidFile
 	}
 
-	// Report configuration
 	if excludeIdle := os.Getenv("ACTIONSUM_EXCLUDE_IDLE"); excludeIdle != "" {
 		if val, err := strconv.ParseBool(excludeIdle); err == nil {
 			cfg.Report.ExcludeIdle = val
@@ -46,7 +40,6 @@ func LoadFromEnv(cfg *Config) {
 		cfg.Report.TimeZone = timeZone
 	}
 
-	// Web configuration
 	if webHost := os.Getenv("ACTIONSUM_WEB_HOST"); webHost != "" {
 		cfg.Web.Host = webHost
 	}
@@ -58,7 +51,6 @@ func LoadFromEnv(cfg *Config) {
 	}
 }
 
-// New creates a new Config with default values and loads from environment
 func New() *Config {
 	cfg := Default()
 	LoadFromEnv(cfg)

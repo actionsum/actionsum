@@ -25,8 +25,6 @@ func TestGetDisplayServer(t *testing.T) {
 func TestIsAvailable(t *testing.T) {
 	detector := NewDetector()
 
-	// Should return true if xdotool or wmctrl is available
-	// We can't guarantee what's installed, so just check it doesn't panic
 	available := detector.IsAvailable()
 	t.Logf("X11 detector available: %v", available)
 	t.Logf("Has xdotool: %v", detector.hasXdotool)
@@ -63,7 +61,6 @@ func TestGetFocusedWindow(t *testing.T) {
 	windowInfo, err := detector.GetFocusedWindow()
 	if err != nil {
 		t.Logf("GetFocusedWindow() error (may be expected): %v", err)
-		// Don't fail - might not be running X11
 		return
 	}
 
@@ -71,13 +68,11 @@ func TestGetFocusedWindow(t *testing.T) {
 		t.Fatal("GetFocusedWindow() returned nil windowInfo without error")
 	}
 
-	// Log the results
 	t.Logf("App Name: %s", windowInfo.AppName)
 	t.Logf("Window Title: %s", windowInfo.WindowTitle)
 	t.Logf("Process Name: %s", windowInfo.ProcessName)
 	t.Logf("Display Server: %s", windowInfo.DisplayServer)
 
-	// Verify fields are populated
 	if windowInfo.AppName == "" {
 		t.Error("AppName is empty")
 	}
@@ -96,7 +91,6 @@ func TestGetIdleInfo(t *testing.T) {
 	idleInfo, err := detector.GetIdleInfo()
 	if err != nil {
 		t.Logf("GetIdleInfo() error: %v", err)
-		// Don't fail - might be expected on some systems
 		return
 	}
 
@@ -104,12 +98,10 @@ func TestGetIdleInfo(t *testing.T) {
 		t.Fatal("GetIdleInfo() returned nil idleInfo without error")
 	}
 
-	// Log the results
 	t.Logf("Is Idle: %v", idleInfo.IsIdle)
 	t.Logf("Is Locked: %v", idleInfo.IsLocked)
 	t.Logf("Idle Time: %d seconds", idleInfo.IdleTime)
 
-	// Verify idle time is non-negative
 	if idleInfo.IdleTime < 0 {
 		t.Errorf("IdleTime is negative: %d", idleInfo.IdleTime)
 	}
@@ -162,33 +154,5 @@ func TestClose(t *testing.T) {
 }
 
 func TestDetectorInterface(t *testing.T) {
-	// Verify that Detector implements window.Detector interface
 	var _ window.Detector = (*Detector)(nil)
-}
-
-// Benchmark tests
-func BenchmarkGetFocusedWindow(b *testing.B) {
-	detector := NewDetector()
-
-	if !detector.IsAvailable() {
-		b.Skip("X11 detector not available")
-	}
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_, _ = detector.GetFocusedWindow()
-	}
-}
-
-func BenchmarkGetIdleInfo(b *testing.B) {
-	detector := NewDetector()
-
-	if !detector.IsAvailable() {
-		b.Skip("X11 detector not available")
-	}
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_, _ = detector.GetIdleInfo()
-	}
 }

@@ -5,7 +5,6 @@ import (
 	"time"
 )
 
-// MockDetector is a mock implementation for testing
 type MockDetector struct {
 	windowInfo    *WindowInfo
 	idleInfo      *IdleInfo
@@ -35,7 +34,6 @@ func (m *MockDetector) Close() error {
 }
 
 func TestMockDetector(t *testing.T) {
-	// Test that MockDetector implements Detector interface
 	var _ Detector = (*MockDetector)(nil)
 
 	mock := &MockDetector{
@@ -54,7 +52,6 @@ func TestMockDetector(t *testing.T) {
 		displayServer: "x11",
 	}
 
-	// Test GetFocusedWindow
 	windowInfo, err := mock.GetFocusedWindow()
 	if err != nil {
 		t.Errorf("GetFocusedWindow() error: %v", err)
@@ -63,7 +60,6 @@ func TestMockDetector(t *testing.T) {
 		t.Errorf("AppName = %s, want TestApp", windowInfo.AppName)
 	}
 
-	// Test GetIdleInfo
 	idleInfo, err := mock.GetIdleInfo()
 	if err != nil {
 		t.Errorf("GetIdleInfo() error: %v", err)
@@ -72,17 +68,14 @@ func TestMockDetector(t *testing.T) {
 		t.Error("IsIdle = true, want false")
 	}
 
-	// Test IsAvailable
 	if !mock.IsAvailable() {
 		t.Error("IsAvailable() = false, want true")
 	}
 
-	// Test GetDisplayServer
 	if mock.GetDisplayServer() != "x11" {
 		t.Errorf("GetDisplayServer() = %s, want x11", mock.GetDisplayServer())
 	}
 
-	// Test Close
 	if err := mock.Close(); err != nil {
 		t.Errorf("Close() error: %v", err)
 	}
@@ -160,7 +153,6 @@ func TestIdleInfo(t *testing.T) {
 				t.Errorf("IsIdle = %v, want %v", tt.info.IsIdle, tt.wantIdle)
 			}
 
-			// Verify IdleTime is non-negative
 			if tt.info.IdleTime < 0 {
 				t.Errorf("IdleTime is negative: %d", tt.info.IdleTime)
 			}
@@ -169,7 +161,6 @@ func TestIdleInfo(t *testing.T) {
 }
 
 func TestIdleThresholds(t *testing.T) {
-	// Test different idle time thresholds
 	tests := []struct {
 		idleTime  int64
 		threshold int64
@@ -194,7 +185,6 @@ func TestIdleThresholds(t *testing.T) {
 	}
 }
 
-// Benchmark creating window info structs
 func BenchmarkWindowInfoCreation(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		_ = WindowInfo{
@@ -206,7 +196,6 @@ func BenchmarkWindowInfoCreation(b *testing.B) {
 	}
 }
 
-// Benchmark creating idle info structs
 func BenchmarkIdleInfoCreation(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		_ = IdleInfo{
@@ -217,9 +206,7 @@ func BenchmarkIdleInfoCreation(b *testing.B) {
 	}
 }
 
-// Example test showing how to use the interface
 func ExampleDetector() {
-	// Create a mock detector for testing
 	mock := &MockDetector{
 		windowInfo: &WindowInfo{
 			AppName:       "Firefox",
@@ -236,14 +223,12 @@ func ExampleDetector() {
 		displayServer: "x11",
 	}
 
-	// Use the detector
 	if mock.IsAvailable() {
 		windowInfo, _ := mock.GetFocusedWindow()
 		println("Current app:", windowInfo.AppName)
 	}
 }
 
-// Test detector lifecycle
 func TestDetectorLifecycle(t *testing.T) {
 	mock := &MockDetector{
 		windowInfo: &WindowInfo{
@@ -261,12 +246,10 @@ func TestDetectorLifecycle(t *testing.T) {
 		displayServer: "x11",
 	}
 
-	// Check availability
 	if !mock.IsAvailable() {
 		t.Fatal("Detector should be available")
 	}
 
-	// Get window info multiple times
 	for i := 0; i < 5; i++ {
 		_, err := mock.GetFocusedWindow()
 		if err != nil {
@@ -275,7 +258,6 @@ func TestDetectorLifecycle(t *testing.T) {
 		time.Sleep(10 * time.Millisecond)
 	}
 
-	// Close
 	if err := mock.Close(); err != nil {
 		t.Errorf("Close() error: %v", err)
 	}

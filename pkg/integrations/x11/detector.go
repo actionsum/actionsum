@@ -9,13 +9,11 @@ import (
 	"github.com/actionsum/actionsum/pkg/window"
 )
 
-// Detector implements window.Detector for X11
 type Detector struct {
 	hasXdotool bool
 	hasWmctrl  bool
 }
 
-// NewDetector creates a new X11 detector
 func NewDetector() *Detector {
 	d := &Detector{}
 	d.hasXdotool = d.commandExists("xdotool")
@@ -23,13 +21,11 @@ func NewDetector() *Detector {
 	return d
 }
 
-// commandExists checks if a command is available in PATH
 func (d *Detector) commandExists(cmd string) bool {
 	_, err := exec.LookPath(cmd)
 	return err == nil
 }
 
-// IsAvailable checks if X11 detection is available
 func (d *Detector) IsAvailable() bool {
 	if d.hasXdotool {
 		return true
@@ -40,12 +36,10 @@ func (d *Detector) IsAvailable() bool {
 	return false
 }
 
-// GetDisplayServer returns "x11"
 func (d *Detector) GetDisplayServer() string {
 	return "x11"
 }
 
-// GetFocusedWindow returns information about the currently focused window
 func (d *Detector) GetFocusedWindow() (*window.WindowInfo, error) {
 	if d.hasXdotool {
 		return d.getFocusedWindowXdotool()
@@ -56,7 +50,6 @@ func (d *Detector) GetFocusedWindow() (*window.WindowInfo, error) {
 	return nil, fmt.Errorf("no X11 detection tool available (xdotool or wmctrl required)")
 }
 
-// getFocusedWindowXdotool uses xdotool to get focused window info
 func (d *Detector) getFocusedWindowXdotool() (*window.WindowInfo, error) {
 	windowIDCmd := exec.Command("xdotool", "getactivewindow")
 	windowIDOutput, err := windowIDCmd.Output()
@@ -74,7 +67,6 @@ func (d *Detector) getFocusedWindowXdotool() (*window.WindowInfo, error) {
 
 	windowTitle := strings.TrimSpace(string(windowNameOutput))
 
-	// Try to get WM_CLASS first (works for Flatpak apps)
 	appName := "Unknown"
 	processName := ""
 
@@ -85,7 +77,6 @@ func (d *Detector) getFocusedWindowXdotool() (*window.WindowInfo, error) {
 		}
 	}
 
-	// Try to get PID and process name (may fail for Flatpak/sandboxed apps)
 	pidCmd := exec.Command("xdotool", "getwindowpid", windowID)
 	if pidOutput, err := pidCmd.Output(); err == nil {
 		pid := strings.TrimSpace(string(pidOutput))
@@ -93,7 +84,6 @@ func (d *Detector) getFocusedWindowXdotool() (*window.WindowInfo, error) {
 		psCmd := exec.Command("ps", "-p", pid, "-o", "comm=")
 		if psOutput, err := psCmd.Output(); err == nil {
 			processName = strings.TrimSpace(string(psOutput))
-			// Only use process name if we didn't get WM_CLASS
 			if appName == "Unknown" && processName != "" {
 				appName = processName
 			}
@@ -108,7 +98,6 @@ func (d *Detector) getFocusedWindowXdotool() (*window.WindowInfo, error) {
 	}, nil
 }
 
-// getFocusedWindowWmctrl uses wmctrl to get focused window info
 func (d *Detector) getFocusedWindowWmctrl() (*window.WindowInfo, error) {
 	cmd := exec.Command("wmctrl", "-l", "-p")
 	output, err := cmd.Output()
@@ -154,7 +143,6 @@ func (d *Detector) getFocusedWindowWmctrl() (*window.WindowInfo, error) {
 	return nil, fmt.Errorf("could not find active window")
 }
 
-// parseWMClass extracts the class name from WM_CLASS property
 func parseWMClass(output string) string {
 	parts := strings.Split(output, "=")
 	if len(parts) < 2 {
@@ -174,7 +162,6 @@ func parseWMClass(output string) string {
 	return ""
 }
 
-// GetIdleInfo returns system idle/lock information
 func (d *Detector) GetIdleInfo() (*window.IdleInfo, error) {
 	idleTime, err := d.getIdleTime()
 	if err != nil {
@@ -193,7 +180,6 @@ func (d *Detector) GetIdleInfo() (*window.IdleInfo, error) {
 	}, nil
 }
 
-// getIdleTime returns the system idle time in seconds
 func (d *Detector) getIdleTime() (int64, error) {
 	if d.hasXdotool {
 		cmd := exec.Command("xprintidle")
@@ -214,7 +200,6 @@ func (d *Detector) getIdleTime() (int64, error) {
 	return 0, nil
 }
 
-// isScreenLocked checks if the screen is locked
 func (d *Detector) isScreenLocked() bool {
 	lockers := []string{
 		"gnome-screensaver-dialog",
@@ -235,7 +220,6 @@ func (d *Detector) isScreenLocked() bool {
 	return false
 }
 
-// Close cleans up resources
 func (d *Detector) Close() error {
 	return nil
 }

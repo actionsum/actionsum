@@ -17,12 +17,10 @@ const (
 	defaultDBDir  = ".config/actionsum"
 )
 
-// DB wraps the gorm.DB connection
 type DB struct {
 	*gorm.DB
 }
 
-// GetDefaultDBPath returns the default database path in user's home directory
 func GetDefaultDBPath() (string, error) {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
@@ -37,7 +35,6 @@ func GetDefaultDBPath() (string, error) {
 	return filepath.Join(dbDir, defaultDBName), nil
 }
 
-// Connect establishes a connection to the SQLite database
 func Connect(dbPath string) (*DB, error) {
 	if dbPath == "" {
 		var err error
@@ -57,7 +54,6 @@ func Connect(dbPath string) (*DB, error) {
 	return &DB{db}, nil
 }
 
-// Initialize creates the necessary database tables using GORM AutoMigrate
 func (db *DB) Initialize() error {
 	err := db.AutoMigrate(&models.FocusEvent{}, &models.ErrorLog{})
 	if err != nil {
@@ -67,7 +63,6 @@ func (db *DB) Initialize() error {
 	return nil
 }
 
-// Close closes the database connection
 func (db *DB) Close() error {
 	sqlDB, err := db.DB.DB()
 	if err != nil {
