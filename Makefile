@@ -30,13 +30,17 @@ push-git:
 
 # Increment version and update version/version.go
 bump-version:
+	@if [ -z "$(TYPE)" ]; then \
+		echo "Error: TYPE argument (major, feat, fix) is required."; \
+		exit 1; \
+	fi
+	@if ! git diff-index --quiet HEAD --; then \
+		echo "Error: You have uncommitted changes. Please commit or stash them before bumping the version."; \
+		exit 1; \
+	fi
 	@echo "Running tests..."; \
 	if ! make test; then \
 		echo "Tests failed. Aborting version bump."; \
-		exit 1; \
-	fi
-	@if [ -z "$(TYPE)" ]; then \
-		echo "Error: TYPE argument (major, feat, fix) is required."; \
 		exit 1; \
 	fi
 	@CURRENT_VERSION=$$(grep -oP 'const Version = \"\K[^"]+' version/version.go); \
