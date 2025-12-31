@@ -2,7 +2,6 @@ package database
 
 import (
 	"fmt"
-	"log"
 	"strings"
 	"time"
 
@@ -91,6 +90,7 @@ func (r *Repository) GetLatest() (*models.FocusEvent, error) {
 }
 
 func (r *Repository) Update(event *models.FocusEvent) error {
+	event.AppName = strings.ToLower(event.AppName)
 	result := r.db.Save(event)
 	if result.Error != nil {
 		return errors.Wrap(result.Error, "failed to update event")
@@ -125,8 +125,8 @@ func (r *Repository) Clear() error {
 	return nil
 }
 
+// NormalizeAppNames updates all app_name values to lowercase
 func (r *Repository) NormalizeAppNames() (int64, error) {
-	log.Println("foi?")
 	result := r.db.Exec("UPDATE focus_events SET app_name = LOWER(app_name)")
 	if result.Error != nil {
 		return 0, errors.Wrap(result.Error, "failed to normalize app names")
